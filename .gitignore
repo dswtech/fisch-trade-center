@@ -9,10 +9,15 @@
 /vendor
 /.tools
 /bootstrap/cache/*
+!/bootstrap/cache/.gitignore
 /storage/framework/views/*
+!/storage/framework/views/.gitignore
 /storage/framework/sessions/*
+!/storage/framework/sessions/.gitignore
 /storage/framework/cache/*
+!/storage/framework/cache/data/
 /storage/logs/*
+!/storage/logs/.gitignore
 /tests/e2e/*.sqlite
 /test-results
 /playwright-report
