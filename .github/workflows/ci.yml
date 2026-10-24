@@ -31,6 +31,8 @@ jobs:
         run: php vendor/bin/phpunit
       - name: Run frontend tests
         run: npm test
+      - name: Run TypeScript typecheck
+        run: npm run typecheck
       - name: Build frontend
         run: npm run build
       - name: Run browser tests

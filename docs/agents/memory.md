@@ -55,14 +55,14 @@ Keputusan terbuka di atas menahan implementasi bagian terkait, bukan penulisan f
 - Fondasi dokumentasi disiapkan sebagai initial commit untuk branch `main`.
 - Workflow CI Windows menjalankan PHPUnit, Vitest, build Vite, dan Playwright dari lockfile. Run pertama menemukan `ext-fileinfo` belum tersedia; run kedua melewati setup PHP tetapi menemukan direktori runtime Laravel hilang pada fresh checkout. Repository sekarang melacak placeholder `.gitignore` untuk `bootstrap/cache` dan direktori runtime `storage`, sedangkan workflow memprovisikan `fileinfo`, `mbstring`, dan `pdo_sqlite` secara eksplisit. Run ketiga pada commit `38ca2fc` lulus. Discovery menampilkan state loading/error/empty yang dapat diumumkan screen reader, memvalidasi value range sebelum request, dan menyediakan recovery untuk error server.
 - Fixture E2E testing-only memiliki 26 listing synthetic agar kombinasi seluruh filter SRC-01 dan kelanjutan cursor dapat diuji dari UI tanpa jaringan atau database persisten.
-- Detector Impeccable menemukan side accent lama pada catatan `unverified`; border tersebut telah diganti dengan treatment outline netral. `tsc --noEmit` belum menjadi gate karena React/Vite declaration packages tidak termasuk dependency yang disetujui dan source lama masih memiliki implicit type errors; tidak ada dependency baru yang dipasang.
+- Detector Impeccable menemukan side accent lama pada catatan `unverified`; border tersebut telah diganti dengan treatment outline netral. TypeScript declaration packages `@types/react@19.3.0`, `@types/react-dom@19.3.0`, dan `@types/node@22.20.5` telah disetujui, dikunci, dan dipakai oleh gate `npm run typecheck` di CI. Kontrak shared Inertia, Vite imports, CSS imports, dan nullable listing value sudah lolos strict typecheck.
 - Perbaikan placeholder direktori runtime diverifikasi dengan `php artisan package:discover` dan PHPUnit 18 test/86 assertion; keduanya lulus. Eksekusi lokal memerlukan izin di luar sandbox hanya agar PHP dapat menulis cache workspace.
+- Verifikasi typecheck: TypeScript lulus tanpa error; PHPUnit lulus 18 test/86 assertion; Vitest lulus 6/6; Playwright lulus 10/10; build Vite lulus memakai Node 22.23.4.
 
 ## Next step
 
-1. Setujui React/Vite declaration packages dan rapikan implicit type errors sebelum menambahkan TypeScript typecheck ke CI.
-2. Tambahkan pemeriksaan error jaringan browser bila aplikasi menetapkan UX offline/retry yang lebih spesifik.
-3. Hubungkan provider value produksi hanya setelah izin dan akses sumber disetujui.
+1. Tambahkan pemeriksaan error jaringan browser bila aplikasi menetapkan UX offline/retry yang lebih spesifik.
+2. Hubungkan provider value produksi hanya setelah izin dan akses sumber disetujui.
 
 ## Cara memperbarui memory
 
