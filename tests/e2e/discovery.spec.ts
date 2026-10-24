@@ -29,3 +29,34 @@ test('keyboard reaches a visible interactive control',async({page})=>{
   await expect(page.locator(':focus')).toBeVisible();
   await expect(page.locator(':focus')).not.toHaveCSS('outline-style','none');
 });
+
+test('combined filters expose loading state and continue with a deterministic cursor',async({page})=>{
+  await page.goto('/search');
+  await page.getByRole('button',{name:/Filters|Filter/}).click();
+  await page.getByLabel('Offered item').selectOption({label:'Abyssal Current'});
+  await page.getByLabel('Wanted item').selectOption({label:'Aurora Rod'});
+  await page.getByLabel('Category').selectOption({label:'Skins'});
+  await page.getByLabel('Minimum value').fill('2400');
+  await page.getByLabel('Maximum value').fill('2400');
+  await page.getByLabel('Freshness').selectOption('hour');
+  await page.route('**/search?**',async route=>{await new Promise(resolve=>setTimeout(resolve,350));await route.continue()},{times:1});
+  await page.getByRole('button',{name:'Apply filters'}).click();
+  await expect(page.getByRole('status')).toContainText('Searching active trades');
+  await expect.poll(()=>new URL(page.url()).searchParams.get('freshness')).toBe('hour');
+  const params=new URL(page.url()).searchParams;
+  expect(params.get('offeredItem')).toBeTruthy();
+  expect(params.get('wantedItem')).toBeTruthy();
+  expect(params.get('category')).toBeTruthy();
+  expect(params.get('minValue')).toBe('2400');
+  expect(params.get('maxValue')).toBe('2400');
+
+  const cards=page.locator('[data-listing-id]');
+  await expect(cards).toHaveCount(24);
+  const firstPageIds=await cards.evaluateAll(elements=>elements.map(element=>element.getAttribute('data-listing-id')));
+  await page.getByRole('link',{name:'Next page'}).click();
+  await expect(page).toHaveURL(/cursor=/);
+  const secondPageIds=await cards.evaluateAll(elements=>elements.map(element=>element.getAttribute('data-listing-id')));
+  expect(secondPageIds.length).toBeGreaterThan(0);
+  expect(secondPageIds.length).toBeLessThan(24);
+  expect(firstPageIds.filter(id=>secondPageIds.includes(id))).toEqual([]);
+});

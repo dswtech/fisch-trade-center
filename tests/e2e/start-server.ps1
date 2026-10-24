@@ -23,5 +23,11 @@ $env:MAIL_MAILER = 'array'
 
 Set-Location $repositoryRoot
 php artisan migrate:fresh --force
+if ($LASTEXITCODE -ne 0) {
+    throw 'Disposable E2E migration failed.'
+}
 php artisan db:seed --force
+if ($LASTEXITCODE -ne 0) {
+    throw 'Disposable E2E seed failed.'
+}
 php -S 127.0.0.1:8011 -t public

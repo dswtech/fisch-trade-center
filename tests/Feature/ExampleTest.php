@@ -81,6 +81,7 @@ final class ExampleTest extends TestCase
     public function test_search_filters_current_listing_version_and_redacts_owner_identity(): void
     {
         $owner=User::create(['name'=>'Private Owner','email'=>'private-owner@example.test','password'=>'password123']);$owner->forceFill(['email_verified_at'=>now()])->save();
+        DB::table('player_profiles')->insert(['user_id'=>$owner->id,'usn'=>'OwnerSecretUSN','ign'=>'OwnerSecretIGN','created_at'=>now(),'updated_at'=>now()]);
         $viewer=User::create(['name'=>'Viewer','email'=>'viewer@example.test','password'=>'password123']);$viewer->forceFill(['email_verified_at'=>now()])->save();
         $categoryId=DB::table('catalog_categories')->insertGetId(['public_id'=>$categoryPublicId=(string)Str::uuid(),'key'=>'skin','name'=>'Skins','is_active'=>true,'created_at'=>now(),'updated_at'=>now()]);
         $offered=CatalogItem::create(['category_id'=>$categoryId,'canonical_name'=>'Abyssal Current','is_active'=>true]);
@@ -93,9 +94,14 @@ final class ExampleTest extends TestCase
 
         $query=http_build_query(['offeredItem'=>$offered->public_id,'wantedItem'=>$wanted->public_id,'category'=>$categoryPublicId,'minValue'=>2400,'maxValue'=>2400,'freshness'=>'hour']);
         $response=$this->actingAs($viewer)->get('/search?'.$query);
-        $response->assertOk()->assertDontSee('private-owner@example.test')->assertDontSee('Private Owner')->assertInertia(fn(Assert $page)=>$page->component('discovery')->has('listings',1)->where('listings.0.offered','Abyssal Current')->where('listings.0.wanted','Aurora Rod')->where('listings.0.value',2400));
+        $response->assertOk()->assertDontSee('private-owner@example.test')->assertDontSee('Private Owner')->assertDontSee('OwnerSecretUSN')->assertDontSee('OwnerSecretIGN')->assertInertia(fn(Assert $page)=>$page->component('discovery')->has('listings',1)->where('listings.0.offered','Abyssal Current')->where('listings.0.wanted','Aurora Rod')->where('listings.0.value',2400));
         $this->actingAs($viewer)->get('/search?'.http_build_query(['maxValue'=>2399]))->assertInertia(fn(Assert $page)=>$page->has('listings',0));
         $this->actingAs($owner)->get('/search?'.$query)->assertInertia(fn(Assert $page)=>$page->has('listings',0));
+    }
+
+    public function test_search_rejects_an_inverted_value_range(): void
+    {
+        $this->get('/search?minValue=2400&maxValue=2399')->assertRedirect()->assertSessionHasErrors('maxValue');
     }
 
     public function test_discovery_cursor_is_deterministic_for_equal_publish_times(): void
