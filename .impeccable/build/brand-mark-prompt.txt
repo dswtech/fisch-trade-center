@@ -1,0 +1,5 @@
+Use case: logo-brand
+Asset type: production transparent plate for a web app brand mark
+Primary request: Recreate only the tiny luminous jellyfish/fishing-exchange mark visible at the far left of the reference crop. Preserve its exact silhouette and cyan-violet line style. The mark must occupy only about 22% of the canvas width and 36% of the canvas height, positioned near the left edge with the same top/bottom margins as the reference. Leave the remaining right 70% of the canvas completely transparent because removed wordmark text used to occupy it.
+Color palette: #080c27, #090e41, #0a136a with controlled cyan-violet light.
+Constraints: exact 3:2 landscape canvas; genuine transparent alpha; no text, no letters, no card background, no shadow panel, no extra bubbles, no watermark; do not center or enlarge the mark.

@@ -1,0 +1,8 @@
+{
+  "source_timestamp": "2026-10-24T00:00:00Z",
+  "rows": [
+    {"external_key": "skin-abyssal", "category": "skin", "name": "Abyssal Current", "value": 2400},
+    {"external_key": "boat-tidebreaker", "category": "boat", "name": "Tidebreaker", "value": 4100},
+    {"external_key": "rod-aurora", "category": "fishing_rod", "name": "Aurora Rod", "value": 3200}
+  ]
+}

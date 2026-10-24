@@ -1,0 +1,2 @@
+import {describe,expect,it} from 'vitest'; import {resolveLocale,resolveTheme} from './preferences';
+describe('preferences',()=>{it('selects Indonesian from browser locale',()=>expect(resolveLocale(null,null,'id-ID')).toBe('id'));it('selects English outside Indonesian locales',()=>expect(resolveLocale(null,null,'ja-JP')).toBe('en'));it('prefers persisted values',()=>{expect(resolveLocale('en','id','id-ID')).toBe('en');expect(resolveTheme('light','dark')).toBe('light')});it('defaults theme to dark',()=>expect(resolveTheme(null,null)).toBe('dark'))});

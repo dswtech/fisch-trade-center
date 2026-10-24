@@ -3,17 +3,17 @@
 | Item | Keterangan |
 |---|---|
 | Dokumen | PRD — Fisch Trade Center |
-| Versi | v1.0 (Draft untuk review) |
+| Versi | v1.1 (Disetujui untuk Fase 0–1) |
 | Tanggal | 24 Oktober 2026 |
 | Disusun oleh | Product |
 | Audiens | Product Owner, Engineering, Design, QA, dan Operations |
-| Status | Menunggu persetujuan — lihat Bagian 14 |
+| Status | Disetujui untuk Fase 0–1; keputusan Fase 2–3 tetap terbuka |
 
 | Item | Keterangan |
 |---|---|
 | Induk | Tidak ada — dokumen produk utama |
 | Cakupan | Trade discovery sampai final deal, serta fase wallet dan pembayaran |
-| Requirement | 68 aktif |
+| Requirement | 69 aktif |
 | Prasyarat | Sumber katalog/value yang dapat digunakan; keputusan pembayaran sebelum Fase 3 |
 | Aturan ID | ID tidak boleh digunakan ulang dan hanya didefinisikan dalam dokumen ini |
 
@@ -142,6 +142,7 @@ Prioritas: `M` Must, `S` Should, `C` Could, dan `W` Won't untuk cakupan rilis sa
 | ACC-03 | **Player dapat mengubah USN/IGN sebelum final deal.** Perubahan wajib tercatat dan deal yang sudah revealed mempertahankan snapshot identitas saat finalisasi. | S |
 | ACC-04 | **Sistem tidak mengungkap email kepada pengguna lain dalam keadaan apa pun.** Email hanya untuk authentication dan komunikasi sistem yang disetujui. | M |
 | ACC-05 | **OAuth atau verifikasi identitas Roblox tidak dikerjakan pada fase awal.** Batas ini mencegah klaim verifikasi semu sebelum integrasi resmi dirancang. | W |
+| ACC-06 | **Email wajib terverifikasi sebelum player mengelola inventory, memublikasikan listing, atau memakai simulator privat.** Katalog dan discovery publik tetap dapat dibaca tanpa verifikasi. | M |
 
 ### 7.2 Katalog dan sinkronisasi value
 
@@ -171,7 +172,7 @@ Prioritas: `M` Must, `S` Should, `C` Could, dan `W` Won't untuk cakupan rilis sa
 | LST-02 | **Offered quantity tidak boleh melebihi quantity inventory saat listing dipublikasikan.** Penjagaan diulang saat proposal dan finalisasi karena inventory dapat berubah. | M |
 | LST-03 | **Listing aktif menampilkan alias anonim, komposisi item, value version, umur listing, dan status tanpa USN/IGN.** Ini memungkinkan discovery tanpa membuka identitas. | M |
 | LST-04 | **Player dapat membatalkan listing miliknya.** Pembatalan mencegah negosiasi baru tetapi tidak menghapus audit atau negotiation yang sudah ada. | M |
-| LST-05 | **Listing kedaluwarsa otomatis berdasarkan konfigurasi server.** Listing expired tidak muncul sebagai aktif dan tidak dapat menerima proposal baru. | S |
+| LST-05 | **Listing Fase 1 kedaluwarsa 14 hari setelah dipublikasikan.** Listing expired tidak muncul sebagai aktif dan tidak dapat menerima proposal baru; kebijakan expiry Fase 2 tetap keputusan terpisah. | S |
 | LST-06 | **Edit material pada listing aktif membuat versi listing baru atau menginvalidasi proposal terkait.** Komposisi yang telah dilihat lawan tidak boleh berubah diam-diam. | M |
 
 ### 7.5 Search dan discovery
@@ -191,7 +192,7 @@ Prioritas: `M` Must, `S` Should, `C` Could, dan `W` Won't untuk cakupan rilis sa
 | REC-01 | **Sistem merekomendasikan kombinasi hanya dari inventory player dengan quantity yang tersedia.** Rekomendasi tidak boleh menawarkan item yang tidak diklaim pengguna. | M |
 | REC-02 | **Seluruh item dalam satu perhitungan menggunakan published value snapshot yang sama.** Mencampur versi menghasilkan perbandingan historis yang tidak dapat diaudit. | M |
 | REC-03 | **Hasil menampilkan give total, receive total, delta nominal, delta persen, offer range, snapshot version, dan perspektif W/F/L.** Perspektif eksplisit mencegah label terbalik. | M |
-| REC-04 | **Ambang Fair dikonfigurasi admin sebagai persentase non-negatif.** Bila belum tersedia, sistem menampilkan `Tidak dapat dinilai` dan tidak mengarang default. | M |
+| REC-04 | **Ambang Fair awal adalah ±10% dan dapat diubah admin secara prospektif sebagai persentase non-negatif.** Perubahan dicatat di audit dan tidak mengubah hasil historis. | M |
 | REC-05 | **Item tanpa value membuat kombinasi tidak mendapat label W/F/L.** Sistem menunjukkan item penyebab agar pengguna memahami kekurangannya. | M |
 | REC-06 | **Sistem dapat mengurutkan kandidat berdasarkan kedekatan value dan jumlah item lebih sedikit.** Ranking bersifat bantuan dan tidak menyatakan jaminan trade terbaik. | S |
 
@@ -346,8 +347,8 @@ Ukuran conversion belum diberi target numerik sebelum baseline karena angka tanp
 |---|---|---|---|---|
 | 1 | Payment provider, metode, mata uang, minimum/maksimum deposit, dan settlement mana yang digunakan? | Product Owner + Finance + Engineering | PAY-02 sampai PAY-05 dan aktivasi Fase 3 | Tinggi |
 | 2 | Berapa fee per pihak, kapan quote kedaluwarsa, serta kapan refund diberikan? | Product Owner + Finance | DEL-03 sampai DEL-05, WAL-02, kebijakan dispute | Tinggi |
-| 3 | Berapa nilai awal `fair_threshold_percent` dan siapa yang menyetujui perubahannya? | Product Owner | Aktivasi label W/F/L pada REC-04 | Tinggi |
-| 4 | Berapa expiry listing, proposal, negotiation, pra-deal, dan identity reveal access? | Product Owner + Operations | Konfigurasi LST-05, NEG-06, DEL-03 | Sedang |
+| 3 | ~~Berapa nilai awal `fair_threshold_percent` dan siapa yang menyetujui perubahannya?~~ | Tertutup 24 Oktober 2026: nilai awal ±10%; admin boleh mengubah secara prospektif dan setiap perubahan wajib diaudit. | REC-04 | Tinggi |
+| 4 | Berapa expiry listing, proposal, negotiation, pra-deal, dan identity reveal access? | Tertutup sebagian 24 Oktober 2026: listing Fase 1 = 14 hari; expiry Fase 2 tetap terbuka. | NEG-06, DEL-03 | Sedang |
 | 5 | Bagaimana report, no-show, scam allegation, suspend, dispute, refund, dan appeal ditangani? | Product Owner + Operations + Legal | ADM-04, ADM-05, production monetization | Tinggi |
 | 6 | Apakah penggunaan/sinkronisasi Value List dan metadata wiki telah memperoleh izin serta akses produksi yang stabil? | Product Owner + Legal | CAT-03 sampai CAT-06 dan SLA freshness | Tinggi |
 | 7 | Berapa retensi audit, proposal, identity snapshot, payment event, dan data akun setelah penghapusan akun? | Product Owner + Legal + Security | AUD-02, privacy policy, production launch | Tinggi |

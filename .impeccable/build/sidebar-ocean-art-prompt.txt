@@ -1,0 +1,5 @@
+Use case: illustration-story
+Asset type: production transparent sidebar illustration plate
+Primary request: Recreate the approved crop as a clean cluster of original deep-blue synthetic fish silhouettes swimming through a subtle indigo current. Preserve the crop's composition, relative scale, calm direction, line weight, soft cyan-violet rim light, and generous margins. Remove every UI label, card border, and background panel.
+Color palette: #080c27, #090e41, #0a136a, controlled cyan-violet highlights.
+Constraints: transparent PNG with genuine alpha and clear interior gaps; no text; no official Fisch or Roblox artwork; no logo; no card rectangle; no watermark; do not add objects.

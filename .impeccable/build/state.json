@@ -1,0 +1,118 @@
+{
+  "tool": "build-phase",
+  "version": 2,
+  "startedAt": "2026-10-24T08:56:22.347Z",
+  "comp": ".impeccable/mocks/hybrid-02-search-first.png",
+  "direction": "a1489822",
+  "breakpoint": "1536x1024",
+  "artifact": null,
+  "phase": "hero",
+  "phases": {
+    "comps": {
+      "status": "closed",
+      "openedAt": "2026-10-24T08:56:22.347Z",
+      "closedAt": "2026-10-24T09:04:12.423Z",
+      "attempts": 1,
+      "notes": [],
+      "gate": {
+        "ok": true,
+        "reasons": [],
+        "summary": "3 comps, 1 approved",
+        "approved": ".impeccable/mocks/hybrid-02-search-first.png",
+        "at": "2026-10-24T09:04:12.423Z"
+      },
+      "forced": null
+    },
+    "spec": {
+      "status": "closed",
+      "openedAt": "2026-10-24T09:04:12.436Z",
+      "closedAt": "2026-10-24T11:26:02.006Z",
+      "attempts": 2,
+      "notes": [],
+      "gate": {
+        "ok": true,
+        "reasons": [],
+        "summary": "27 regions, 3 plates, 4 text regions measured",
+        "at": "2026-10-24T11:26:02.006Z"
+      },
+      "forced": null
+    },
+    "plates": {
+      "status": "closed",
+      "openedAt": "2026-10-24T11:26:02.006Z",
+      "closedAt": "2026-10-24T11:34:00.059Z",
+      "attempts": 3,
+      "notes": [],
+      "gate": {
+        "ok": true,
+        "reasons": [],
+        "summary": "3/3 plates",
+        "at": "2026-10-24T11:34:00.059Z"
+      },
+      "forced": null
+    },
+    "hero": {
+      "status": "open",
+      "openedAt": "2026-10-24T11:34:00.059Z",
+      "closedAt": null,
+      "attempts": 0,
+      "notes": [],
+      "gate": null,
+      "forced": null
+    },
+    "sections": {
+      "status": "pending",
+      "openedAt": null,
+      "closedAt": null,
+      "attempts": 0,
+      "notes": [],
+      "gate": null,
+      "forced": null
+    },
+    "motion": {
+      "status": "pending",
+      "openedAt": null,
+      "closedAt": null,
+      "attempts": 0,
+      "notes": [],
+      "gate": null,
+      "forced": null
+    },
+    "responsive": {
+      "status": "pending",
+      "openedAt": null,
+      "closedAt": null,
+      "attempts": 0,
+      "notes": [],
+      "gate": null,
+      "forced": null
+    },
+    "review": {
+      "status": "pending",
+      "openedAt": null,
+      "closedAt": null,
+      "attempts": 0,
+      "notes": [],
+      "gate": null,
+      "forced": null
+    }
+  },
+  "finish": null,
+  "plates": {
+    "brand-mark": {
+      "status": "ok",
+      "score": 0.4494,
+      "size": "512x512"
+    },
+    "sidebar-ocean-art": {
+      "status": "ok",
+      "score": 0.5551,
+      "size": "1254x1254"
+    },
+    "trade-ocean-field": {
+      "status": "ok",
+      "score": 0.4768,
+      "size": "492x204"
+    }
+  }
+}

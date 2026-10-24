@@ -1,0 +1,4 @@
+Use case: texture plate
+Asset type: production opaque background texture for the Give/Receive workbench
+Primary request: Mirror-tile the clean, UI-free approved comp sample from `.impeccable/build/trade-ocean-texture-source.png` into a 492×204 texture while preserving its deep-navy and bioluminescent-blue pixels.
+Constraints: no new objects, text, UI, borders, or color shifts; opaque edge-to-edge; alternating horizontal and vertical mirroring prevents hard seams.

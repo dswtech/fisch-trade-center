@@ -33,6 +33,7 @@ Direktori ini adalah sumber konteks bersama bagi manusia dan coding agent. Setia
 | [`adr/ADR-004-anonymous-trade-state-machine.md`](adr/ADR-004-anonymous-trade-state-machine.md) | ADR | Engineering | Menetapkan state transaksi dan batas reveal identitas. |
 | [`adr/ADR-005-wallet-and-atomic-finalization.md`](adr/ADR-005-wallet-and-atomic-finalization.md) | ADR | Engineering | Menetapkan ledger immutable, gateway abstraction, dan finalisasi atomik. |
 | [`adr/ADR-006-server-only-configuration.md`](adr/ADR-006-server-only-configuration.md) | ADR | Engineering | Menetapkan seluruh secret dan konfigurasi sensitif tetap server-only. |
+| [`adr/ADR-007-production-postgresql-test-sqlite.md`](adr/ADR-007-production-postgresql-test-sqlite.md) | ADR | Engineering | Menetapkan PostgreSQL untuk produksi dan SQLite disposable untuk test. |
 
 ## Referensi eksternal
 
