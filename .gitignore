@@ -10,7 +10,14 @@
 /.tools
 /bootstrap/cache/*
 /storage/framework/views/*
+/storage/framework/sessions/*
+/storage/framework/cache/*
 /storage/logs/*
+/tests/e2e/*.sqlite
+/test-results
+/playwright-report
+/tests/benchmark/.pgdata
+/tests/benchmark/postgres.log
 .env
 .env.backup
 .env.production

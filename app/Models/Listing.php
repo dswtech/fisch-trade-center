@@ -33,4 +33,42 @@ class Listing extends Model
     {
         return $this->hasOne(ListingVersion::class)->ofMany('version','max');
     }
+
+    public function scopeWithCurrentItem(Builder $query, string $side, int $catalogItemId): Builder
+    {
+        return $query->whereExists(function ($items) use ($side, $catalogItemId): void {
+            $items->selectRaw('1')
+                ->from('listing_versions')
+                ->join('listing_version_items', 'listing_version_items.listing_version_id', '=', 'listing_versions.id')
+                ->whereColumn('listing_versions.listing_id', 'listings.id')
+                ->whereColumn('listing_versions.version', 'listings.current_version')
+                ->where('listing_version_items.side', $side)
+                ->where('listing_version_items.catalog_item_id', $catalogItemId);
+        });
+    }
+
+    public function scopeWithCurrentCategory(Builder $query, int $categoryId): Builder
+    {
+        return $query->whereExists(function ($items) use ($categoryId): void {
+            $items->selectRaw('1')
+                ->from('listing_versions')
+                ->join('listing_version_items', 'listing_version_items.listing_version_id', '=', 'listing_versions.id')
+                ->join('catalog_items', 'catalog_items.id', '=', 'listing_version_items.catalog_item_id')
+                ->whereColumn('listing_versions.listing_id', 'listings.id')
+                ->whereColumn('listing_versions.version', 'listings.current_version')
+                ->where('catalog_items.category_id', $categoryId);
+        });
+    }
+
+    public function scopeWithCurrentOfferedValue(Builder $query, ?int $minimum, ?int $maximum): Builder
+    {
+        return $query->whereExists(function ($versions) use ($minimum, $maximum): void {
+            $versions->selectRaw('1')
+                ->from('listing_versions')
+                ->whereColumn('listing_versions.listing_id', 'listings.id')
+                ->whereColumn('listing_versions.version', 'listings.current_version')
+                ->when($minimum !== null, fn ($query) => $query->where('listing_versions.offered_value', '>=', $minimum))
+                ->when($maximum !== null, fn ($query) => $query->where('listing_versions.offered_value', '<=', $maximum));
+        });
+    }
 }

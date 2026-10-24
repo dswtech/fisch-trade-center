@@ -9,6 +9,7 @@ use App\Models\InventoryEntry;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
 final class ExampleTest extends TestCase
@@ -56,7 +57,7 @@ final class ExampleTest extends TestCase
         $this->actingAs($user)->post('/listings',$payload)->assertSessionHasNoErrors(); $listing=Listing::firstOrFail();
         self::assertEquals(14,now()->startOfDay()->diffInDays($listing->expires_at->startOfDay()));
         $this->actingAs($user)->patch('/listings/'.$listing->public_id,$payload)->assertSessionHasNoErrors();
-        self::assertSame(2,$listing->fresh()->current_version); self::assertDatabaseCount('listing_versions',2);
+        self::assertSame(2,$listing->fresh()->current_version); self::assertDatabaseCount('listing_versions',2); self::assertDatabaseCount('listing_version_items',4);
     }
 
     public function test_admin_routes_require_admin_and_audit_threshold_changes(): void
@@ -70,10 +71,45 @@ final class ExampleTest extends TestCase
     public function test_admin_fixture_publish_is_immutable_and_idempotent(): void
     {
         $admin=User::create(['name'=>'Admin','email'=>'publisher@example.test','password'=>'password123','role'=>'admin']); $admin->forceFill(['email_verified_at'=>now()])->save();
+        foreach([['skin','Skins','Abyssal Current'],['boat','Boats','Tidebreaker'],['fishing_rod','Fishing Rods','Aurora Rod']] as [$key,$category,$name]){$categoryId=DB::table('catalog_categories')->insertGetId(['public_id'=>(string)Str::uuid(),'key'=>$key,'name'=>$category,'is_active'=>true,'created_at'=>now(),'updated_at'=>now()]);CatalogItem::create(['category_id'=>$categoryId,'canonical_name'=>$name,'is_active'=>true]);}
         $this->actingAs($admin)->post('/admin/value-imports/fixture')->assertSessionHasNoErrors(); $import=DB::table('value_imports')->first();
         $this->actingAs($admin)->post('/admin/value-snapshots/publish',['importId'=>$import->public_id])->assertSessionHasNoErrors();
         $this->actingAs($admin)->post('/admin/value-snapshots/publish',['importId'=>$import->public_id])->assertSessionHasNoErrors();
-        self::assertDatabaseCount('value_snapshots',1); self::assertDatabaseHas('audit_events',['event_type'=>'value_snapshot.published']);
+        self::assertDatabaseCount('value_snapshots',1); self::assertDatabaseCount('catalog_item_values',3); self::assertDatabaseHas('audit_events',['event_type'=>'value_snapshot.published']);
+    }
+
+    public function test_search_filters_current_listing_version_and_redacts_owner_identity(): void
+    {
+        $owner=User::create(['name'=>'Private Owner','email'=>'private-owner@example.test','password'=>'password123']);$owner->forceFill(['email_verified_at'=>now()])->save();
+        $viewer=User::create(['name'=>'Viewer','email'=>'viewer@example.test','password'=>'password123']);$viewer->forceFill(['email_verified_at'=>now()])->save();
+        $categoryId=DB::table('catalog_categories')->insertGetId(['public_id'=>$categoryPublicId=(string)Str::uuid(),'key'=>'skin','name'=>'Skins','is_active'=>true,'created_at'=>now(),'updated_at'=>now()]);
+        $offered=CatalogItem::create(['category_id'=>$categoryId,'canonical_name'=>'Abyssal Current','is_active'=>true]);
+        $wanted=CatalogItem::create(['category_id'=>$categoryId,'canonical_name'=>'Aurora Rod','is_active'=>true]);
+        $importId=DB::table('value_imports')->insertGetId(['public_id'=>(string)Str::uuid(),'source_key'=>'test','status'=>'valid','checksum'=>str_repeat('a',64),'source_timestamp'=>now(),'validation_errors'=>'[]','payload'=>'[]','imported_at'=>now(),'created_at'=>now(),'updated_at'=>now()]);
+        $snapshotId=DB::table('value_snapshots')->insertGetId(['public_id'=>(string)Str::uuid(),'value_import_id'=>$importId,'version'=>'test-v1','checksum'=>str_repeat('b',64),'source_timestamp'=>now(),'published_at'=>now(),'published_by'=>$owner->id,'created_at'=>now(),'updated_at'=>now()]);
+        DB::table('catalog_item_values')->insert([['snapshot_id'=>$snapshotId,'catalog_item_id'=>$offered->id,'unit_value'=>2400],['snapshot_id'=>$snapshotId,'catalog_item_id'=>$wanted->id,'unit_value'=>3200]]);
+        $entry=InventoryEntry::create(['user_id'=>$owner->id,'catalog_item_id'=>$offered->id,'quantity'=>2]);
+        $this->actingAs($owner)->post('/listings',['offered'=>[['inventoryEntryId'=>$entry->public_id,'quantity'=>1]],'wanted'=>[['catalogItemId'=>$wanted->public_id,'quantity'=>1]]])->assertSessionHasNoErrors();
+
+        $query=http_build_query(['offeredItem'=>$offered->public_id,'wantedItem'=>$wanted->public_id,'category'=>$categoryPublicId,'minValue'=>2400,'maxValue'=>2400,'freshness'=>'hour']);
+        $response=$this->actingAs($viewer)->get('/search?'.$query);
+        $response->assertOk()->assertDontSee('private-owner@example.test')->assertDontSee('Private Owner')->assertInertia(fn(Assert $page)=>$page->component('discovery')->has('listings',1)->where('listings.0.offered','Abyssal Current')->where('listings.0.wanted','Aurora Rod')->where('listings.0.value',2400));
+        $this->actingAs($viewer)->get('/search?'.http_build_query(['maxValue'=>2399]))->assertInertia(fn(Assert $page)=>$page->has('listings',0));
+        $this->actingAs($owner)->get('/search?'.$query)->assertInertia(fn(Assert $page)=>$page->has('listings',0));
+    }
+
+    public function test_discovery_cursor_is_deterministic_for_equal_publish_times(): void
+    {
+        $viewer=User::create(['name'=>'Viewer','email'=>'cursor-viewer@example.test','password'=>'password123']);
+        $owner=User::create(['name'=>'Owner','email'=>'cursor-owner@example.test','password'=>'password123']);
+        foreach(range(1,30) as $index){Listing::create(['user_id'=>$owner->id,'status'=>'active','published_at'=>'2026-10-24 12:00:00','expires_at'=>'2026-11-07 12:00:00']);}
+
+        $first=Listing::discoverable($viewer->id)->cursorPaginate(10);
+        $second=Listing::discoverable($viewer->id)->cursorPaginate(10,['*'],'cursor',$first->nextCursor());
+        $firstIds=collect($first->items())->pluck('id');$secondIds=collect($second->items())->pluck('id');
+
+        self::assertCount(10,$firstIds);self::assertCount(10,$secondIds);self::assertTrue($firstIds->intersect($secondIds)->isEmpty());
+        self::assertSame(range(30,21),$firstIds->all());self::assertSame(range(20,11),$secondIds->all());
     }
 
     private function playerAndItem(string $email): array

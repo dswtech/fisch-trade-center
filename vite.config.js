@@ -17,4 +17,7 @@ export default defineConfig({
         },
     },
     server: { cors: true, strictPort: true },
+    test: {
+        include: ['resources/js/**/*.test.{ts,tsx}'],
+    },
 });

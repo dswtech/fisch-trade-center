@@ -2,12 +2,16 @@
     "$schema": "https://www.schemastore.org/package.json",
     "private": true,
     "type": "module",
+    "engines": {
+        "node": "22.23.4",
+        "npm": "10.9.9"
+    },
     "scripts": {
         "build": "vite build",
         "dev": "vite",
         "test": "vitest run",
         "test:watch": "vitest",
-        "test:e2e": "playwright test"
+        "test:e2e": "npm run build && playwright test"
     },
     "dependencies": {
         "@inertiajs/react": "3.9.1",

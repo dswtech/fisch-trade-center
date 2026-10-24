@@ -47,15 +47,18 @@ Keputusan terbuka di atas menahan implementasi bagian terkait, bukan penulisan f
 - Seluruh tautan relatif valid dan tidak ada dokumen agen yatim terhadap manifest.
 - Core Fase 1 tersedia: authentication/verifikasi email, onboarding profil manual, shared Inertia props yang diredaksi, preferensi locale/theme, katalog, inventory CRUD, listing wizard/management berversi, cursor search, simulator W/F/L fail-closed, fixture ValueSource, konfigurasi/audit admin, dan dashboard responsif.
 - Comp final disetujui di `.impeccable/mocks/hybrid-02-search-first.png`; plate original dan prompt provenance tersedia. `DESIGN.md` dan `resources/design/tokens.json` menjadi sumber design system.
-- Verifikasi terakhir: PHPUnit 13.4.3 lulus 15 test/39 assertion; Vitest 5.0.5 lulus 4 test; Vite 8.3.5 build lulus dengan Node 22.23.4.
+- Verifikasi terakhir: PHPUnit 13.4.3 lulus 17 test/81 assertion; Vitest 5.0.5 lulus 4 test; Playwright lulus 8/8 pada desktop dan mobile; Vite 8.3.5 build lulus dengan Node 22.23.4.
+- Harness E2E memakai SQLite file disposable, fixture testing-only, dan menguji login verified user, profil privat, inventory, listing, penerapan filter offered/wanted sebagai guest, redaksi identitas, simulator, filter sheet, keyboard/focus, theme persistence, serta responsive overflow.
+- Search SRC-01 memakai item per versi yang ternormalisasi, filter offered/wanted item, kategori, offered value range, dan freshness; cursor diurutkan deterministik berdasarkan `published_at` lalu `id`. Setiap versi menyimpan snapshot serta total value-nya sendiri, sedangkan payload JSON immutable tetap dipertahankan.
+- Benchmark PostgreSQL 16.4 disposable pada 100.000 listing dan 200.000 item lulus untuk seluruh matrix SRC-01. p95: baseline 18,64 ms; offered 82,55 ms; wanted 83,16 ms; kategori 97,86 ms; value range 50,83 ms; freshness 19,43 ms; gabungan 349,10 ms. Target p95 <=1 detik terpenuhi; cluster dan log terhapus setelah run.
 - Visual QA 1440/768/375 tidak menemukan horizontal overflow. Detector Impeccable menemukan satu font generik dan sudah dikoreksi. Axe menemukan nama tautan/region scroll dan source sudah dikoreksi; pemeriksaan ulang belum dijalankan agar batas dua putaran QA tetap dipatuhi.
 - Fondasi dokumentasi disiapkan sebagai initial commit untuk branch `main`.
 
 ## Next step
 
-1. Tambahkan benchmark PostgreSQL disposable 100.000 listing; performance release gate tetap belum terverifikasi sampai selesai.
-2. Hubungkan provider value produksi hanya setelah izin dan akses sumber disetujui.
-3. Perluas component/E2E test untuk dialog, keyboard, listing wizard, dan seluruh state loading/empty/error pada iterasi QA berikutnya.
+1. Tambahkan CI untuk PHPUnit, Vitest, build, dan Playwright serta state loading/empty/error yang belum tercakup.
+2. Tambahkan test browser yang menerapkan kombinasi filter dan melanjutkan cursor dari UI.
+3. Hubungkan provider value produksi hanya setelah izin dan akses sumber disetujui.
 
 ## Cara memperbarui memory
 
