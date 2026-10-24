@@ -53,16 +53,15 @@ Keputusan terbuka di atas menahan implementasi bagian terkait, bukan penulisan f
 - Benchmark PostgreSQL 16.4 disposable pada 100.000 listing dan 200.000 item lulus untuk seluruh matrix SRC-01. p95: baseline 18,64 ms; offered 82,55 ms; wanted 83,16 ms; kategori 97,86 ms; value range 50,83 ms; freshness 19,43 ms; gabungan 349,10 ms. Target p95 <=1 detik terpenuhi; cluster dan log terhapus setelah run.
 - Visual QA 1440/768/375 tidak menemukan horizontal overflow. Detector Impeccable menemukan satu font generik dan sudah dikoreksi. Axe menemukan nama tautan/region scroll dan source sudah dikoreksi; pemeriksaan ulang belum dijalankan agar batas dua putaran QA tetap dipatuhi.
 - Fondasi dokumentasi disiapkan sebagai initial commit untuk branch `main`.
-- Workflow CI Windows telah ditambahkan untuk menjalankan PHPUnit, Vitest, build Vite, dan Playwright dari lockfile. Hasil run GitHub pertama belum tersedia. Discovery menampilkan state loading/error/empty yang dapat diumumkan screen reader, memvalidasi value range sebelum request, dan menyediakan recovery untuk error server.
+- Workflow CI Windows menjalankan PHPUnit, Vitest, build Vite, dan Playwright dari lockfile. Run pertama menemukan `ext-fileinfo` belum tersedia pada runner; workflow sekarang memprovisikan `fileinfo`, `mbstring`, dan `pdo_sqlite` secara eksplisit. Discovery menampilkan state loading/error/empty yang dapat diumumkan screen reader, memvalidasi value range sebelum request, dan menyediakan recovery untuk error server.
 - Fixture E2E testing-only memiliki 26 listing synthetic agar kombinasi seluruh filter SRC-01 dan kelanjutan cursor dapat diuji dari UI tanpa jaringan atau database persisten.
 - Detector Impeccable menemukan side accent lama pada catatan `unverified`; border tersebut telah diganti dengan treatment outline netral. `tsc --noEmit` belum menjadi gate karena React/Vite declaration packages tidak termasuk dependency yang disetujui dan source lama masih memiliki implicit type errors; tidak ada dependency baru yang dipasang.
 
 ## Next step
 
-1. Tinjau hasil CI pertama pada GitHub dan sesuaikan hanya bila environment runner berbeda dari workstation.
-2. Setujui React/Vite declaration packages dan rapikan implicit type errors sebelum menambahkan TypeScript typecheck ke CI.
-3. Tambahkan pemeriksaan error jaringan browser bila aplikasi menetapkan UX offline/retry yang lebih spesifik.
-4. Hubungkan provider value produksi hanya setelah izin dan akses sumber disetujui.
+1. Setujui React/Vite declaration packages dan rapikan implicit type errors sebelum menambahkan TypeScript typecheck ke CI.
+2. Tambahkan pemeriksaan error jaringan browser bila aplikasi menetapkan UX offline/retry yang lebih spesifik.
+3. Hubungkan provider value produksi hanya setelah izin dan akses sumber disetujui.
 
 ## Cara memperbarui memory
 
