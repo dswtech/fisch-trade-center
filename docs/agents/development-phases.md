@@ -4,7 +4,7 @@
 |---|---|
 | Dokumen | Roadmap fase development dan audit gap implementasi |
 | Versi | v1.0 |
-| Tanggal audit | 25 Oktober 2026 |
+| Tanggal audit | 26 Oktober 2026 |
 | Pemilik | Product dan Engineering |
 | Status | Aktif |
 
@@ -18,7 +18,7 @@ Target MVP mencakup Fase 0–4 dengan wallet dan fee nonaktif serta `fee = 0`. F
 |---|---|---|---|
 | 0 — Fondasi & Security Baseline | ACC-01–ACC-06 | Tidak ada | Hampir selesai |
 | 1 — Catalog Data & Admin | CAT-01–CAT-06, AUD-04, ADM-01, ADM-03 | Fase 0 | Hampir selesai |
-| 2 — Player Trade Core | INV-01–INV-04, LST-01–LST-06, SRC-01–SRC-05 | Fase 0–1 | Parsial kuat |
+| 2 — Player Trade Core | INV-01–INV-04, LST-01–LST-06, SRC-01–SRC-05 | Fase 0–1 | Hampir selesai |
 | 3 — Recommendation & Negotiation | REC-01–REC-06, NEG-01–NEG-07 | Fase 0–2 | Fondasi saja |
 | 4 — Pre-deal, Reveal & Trust Operations | NEG-08, DEL-01–DEL-08, AUD-01–AUD-03, ADM-02, ADM-04–ADM-05 | Fase 0–3 | Fondasi saja |
 | 5 — Wallet, Payment & Dispute Finansial | WAL-01–WAL-06, PAY-01–PAY-05 | Fase 0–4 dan keputusan produk pembayaran | Belum dimulai; bukan gate MVP |
@@ -30,9 +30,9 @@ Pemetaan di atas menempatkan seluruh 69 requirement aktif tepat pada satu fase u
 
 | Fase | Route/UI | Implementation path | Test yang tersedia |
 |---|---|---|---|
-| 0 | Route authentication, verification, profile, dan preferences di `routes/web.php` | `AuthController`, middleware idempotensi, `bootstrap/app.php`, `.github/workflows/ci.yml` | Authentication gate dan idempotensi di `tests/Feature/ExampleTest.php`; suite terakhir tercatat di memory |
-| 1 | Route admin import, Rod, dan thumbnail di `routes/web.php`; panel `resources/js/pages/admin.tsx` | `app/Domain/Catalog`, controller admin katalog, migration Rod/thumbnail | `CatalogValueCsvImportTest.php` dan `resources/js/tests/admin.test.tsx` |
-| 2 | Route inventory, listing, search, dan simulator di `routes/web.php`; UI workspace/discovery | Controller inventory/listing/search, `DiscoveryPresenter`, `WflCalculator`, model listing version | `ExampleTest.php`, E2E discovery/player flow/accessibility, dan benchmark search |
+| 0 | Route authentication, verification, profile, dan preferences di `routes/web.php`; mutation privat memakai rate limit | `AuthController`, middleware idempotensi, `bootstrap/app.php`, `.github/workflows/ci.yml` | Authentication, idempotensi, dan rate limit mutation di `tests/Feature/ExampleTest.php` |
+| 1 | Route admin import, lifecycle Rod, metadata katalog, dan thumbnail di `routes/web.php`; panel `resources/js/pages/admin.tsx` | `app/Domain/Catalog`, controller admin katalog, migration Rod/thumbnail | `CatalogValueCsvImportTest.php` termasuk failure injection publish dan `resources/js/tests/admin.test.tsx` |
+| 2 | Route inventory, listing termasuk halaman edit, search, dan simulator di `routes/web.php`; UI workspace/discovery | Controller inventory/listing/search, `DiscoveryPresenter`, `WflCalculator`, model listing version | `ExampleTest.php`, E2E discovery/player flow/accessibility, dan benchmark search |
 | 3 | Belum ada route; form `trade.tsx` menargetkan endpoint negotiation yang belum terdaftar | Migration Fase 3, `RecommendationService`, `NegotiationService`, `NegotiationInvalidator`, `PhaseTwoExpiryService` | Belum ada test recommendation/negotiation |
 | 4 | Belum ada route deal/report/suspension/audit; `trade.tsx` belum dapat dijangkau | `DealService`, controller report/suspension/audit, schema deal/reveal | `ModerationAuditTest.php` menguji service terbatas; belum ada test deal/reveal HTTP atau concurrency |
 | 5 | Tidak ada route atau UI wallet/payment | ADR-005 saja; schema dan domain wallet/payment belum tersedia | Belum ada |
@@ -44,11 +44,7 @@ Pemetaan di atas menempatkan seluruh 69 requirement aktif tepat pada satu fase u
 
 **Bukti:** authentication email/password, email verification, CSRF session web, middleware idempotensi, konfigurasi server-only, dan workflow CI tersedia. Test yang tercatat di memory mencakup authentication gate dan idempotensi mutation.
 
-**Gap dan blocker:**
-
-- Rate limit belum diterapkan merata pada endpoint privat seperti yang diwajibkan NFR Security.
-- Redesign katalog setelah checkpoint `a77ac3d` masih berupa working tree yang belum di-commit.
-- Verifikasi lokal tidak dapat diulang pada audit ini karena `vendor/autoload.php` tidak tersedia; hasil terakhir yang tervalidasi tetap dicatat di memory.
+**Gap dan blocker:** rate limit endpoint mutation privat telah diterapkan dan diuji. Perubahan penutupan gap masih berupa working tree yang belum di-commit. Keputusan rate limit read-heavy endpoint tetap menjadi hardening Fase 6, bukan penghalang capability Fase 0.
 
 **Gerbang keluar:** seluruh endpoint privat mempunyai authentication, authorization, CSRF, dan rate limit yang sesuai; pipeline terkunci lulus; tidak ada secret client; perubahan material tersimpan dalam checkpoint yang dapat dilacak.
 
@@ -58,12 +54,7 @@ Pemetaan di atas menempatkan seluruh 69 requirement aktif tepat pada satu fase u
 
 **Bukti:** endpoint template, staging, publish, create/assign Rod, serta upload/delete thumbnail terdaftar; service CSV menyediakan partial upsert dan snapshot immutable; feature/component test katalog tersedia.
 
-**Gap dan blocker:**
-
-- `CatalogAdminController` dan `CatalogAdminService` sudah ada, tetapi update status/alias belum memiliki route dan UI operasional.
-- Master Rod baru mendukung create dan assignment; edit, inactive, atau pengelolaan lifecycle belum tersedia.
-- Atomic publish sudah memakai transaction, tetapi rollback akibat kegagalan di tengah publish belum dibuktikan dengan failure-injection test.
-- Migration redesign belum dijalankan pada database persisten dan tetap menjadi langkah rollout yang memerlukan instruksi eksplisit.
+**Gap dan blocker:** update status/alias katalog serta rename/inactive Rod kini mempunyai route, UI, authorization, audit, dan test. Rollback publish dibuktikan dengan SQLite failure injection. Seluruh migration pending Fase 1–4 telah dijalankan pada database persisten pada 26 Oktober 2026 setelah otorisasi eksplisit.
 
 **Gerbang keluar:** seluruh CAT serta ADM/AUD terkait dapat dijalankan dari admin, authorization dan audit lulus, invalid staging tidak mengubah snapshot aktif, replay publish idempotent, dan kegagalan publish terbukti rollback penuh.
 
@@ -73,12 +64,7 @@ Pemetaan di atas menempatkan seluruh 69 requirement aktif tepat pada satu fase u
 
 **Bukti:** route inventory/listing/search/simulator, versioned listing, deterministic cursor, redacted discovery DTO, W/F/L calculator, E2E player flow, accessibility test, serta benchmark PostgreSQL tersedia.
 
-**Gap dan blocker:**
-
-- `PhaseOnePageController::listingEdit` tersedia, tetapi route GET halaman edit belum terdaftar.
-- Atribut tambahan inventory pada INV-04 belum diimplementasikan.
-- Sebagian kontrol dan rekomendasi pada homepage masih presentasional dan belum terhubung ke aksi nyata.
-- Coverage invalidasi listing setelah perubahan inventory dan rate limit mutation belum memenuhi gerbang fase.
+**Gap dan blocker:** route halaman edit listing, invalidasi listing setelah inventory berkurang, rate limit mutation, dan kontrol homepage telah terhubung serta diuji. Homepage tidak lagi menampilkan rekomendasi/value sintetis sebagai data nyata. INV-04 bersifat kondisional; empat kategori aktif saat ini belum mempunyai atribut tambahan wajib, sehingga tidak memerlukan field generik pada MVP. Penambahan atribut baru harus mengikuti aturan kategori konkret dan test baru.
 
 **Gerbang keluar:** seluruh alur inventory/listing/search/simulator dapat diselesaikan dari UI, edit listing dapat dijangkau, stale inventory ditolak atau menginvalidasi state terkait, redaction tetap bersih, dan target p95 search terpenuhi.
 
@@ -129,15 +115,15 @@ Pemetaan di atas menempatkan seluruh 69 requirement aktif tepat pada satu fase u
 
 **Bukti:** workflow CI, correlation ID, audit event, benchmark search, accessibility test, dan harness E2E disposable tersedia.
 
-**Gap dan blocker:** RPO/RTO, retention, backup/restore drill, monitoring, runbook, persistent migration rollout, dan re-verifikasi suite belum selesai.
+**Gap dan blocker:** RPO/RTO, retention, backup/restore drill, monitoring, runbook, dan benchmark PostgreSQL belum selesai. Rollout migration saat ini sudah selesai, tetapi migration berikutnya tetap memerlukan rencana dan otorisasi terpisah.
 
 **Gerbang keluar:** dependency terkunci dipulihkan; `composer test`, Vitest, TypeScript, build, Playwright, dan benchmark relevan lulus; migration plan disetujui dan dijalankan terpisah; rollback, monitoring, retention, serta backup/restore tervalidasi.
 
 ## Urutan backlog
 
-1. Stabilkan dan commit redesign katalog tanpa menjalankan migration persisten.
-2. Tutup gap admin katalog dan Player Trade Core.
-3. Hubungkan Recommendation & Negotiation end-to-end beserta invalidation dan expiry.
+1. Review dan commit penutupan gap Fase 0–2 tanpa menjalankan migration persisten.
+2. Putuskan expiry proposal/negotiation, lalu hubungkan Recommendation & Negotiation end-to-end beserta invalidation dan expiry.
+3. Verifikasi ulang seluruh Fase 0–3 setelah jalur negotiation aktif.
 4. Hubungkan Pre-deal, Reveal, dan minimum trust operations dengan privacy/concurrency test.
 5. Selesaikan production hardening dan rollout MVP Fase 0–4.
 6. Mulai Wallet & Payment hanya setelah seluruh keputusan produk Fase 5 ditutup.

@@ -58,6 +58,29 @@ final class ExampleTest extends TestCase
         self::assertEquals(14,now()->startOfDay()->diffInDays($listing->expires_at->startOfDay()));
         $this->actingAs($user)->patch('/listings/'.$listing->public_id,$payload)->assertSessionHasNoErrors();
         self::assertSame(2,$listing->fresh()->current_version); self::assertDatabaseCount('listing_versions',2); self::assertDatabaseCount('listing_version_items',4);
+        $this->actingAs($user)->get('/listings/'.$listing->public_id.'/edit')->assertOk()->assertInertia(fn(Assert $page)=>$page->component('workspace')->where('section','listing-edit')->where('listings.0.id',$listing->public_id));
+    }
+
+    public function test_inventory_reduction_invalidates_dependent_listing(): void
+    {
+        [$user,$item]=$this->playerAndItem('inventory-invalidation@example.test');
+        $entry=InventoryEntry::create(['user_id'=>$user->id,'catalog_item_id'=>$item->id,'quantity'=>2]);
+        $payload=['offered'=>[['inventoryEntryId'=>$entry->public_id,'quantity'=>2]],'wanted'=>[['catalogItemId'=>$item->public_id,'quantity'=>1]]];
+        $this->actingAs($user)->post('/listings',$payload)->assertSessionHasNoErrors();
+
+        $this->actingAs($user)->patch('/inventory/'.$entry->public_id,['quantity'=>1])->assertSessionHasNoErrors();
+
+        self::assertSame('invalidated',Listing::firstOrFail()->status);
+    }
+
+    public function test_private_mutations_are_rate_limited(): void
+    {
+        [$user]=$this->playerAndItem('rate-limit@example.test');
+        foreach(range(1,60) as $attempt){
+            $this->actingAs($user)->patch('/preferences',['locale'=>'id','theme'=>'dark'])->assertRedirect();
+        }
+
+        $this->actingAs($user)->patch('/preferences',['locale'=>'id','theme'=>'dark'])->assertStatus(429);
     }
 
     public function test_admin_routes_require_admin_and_audit_threshold_changes(): void

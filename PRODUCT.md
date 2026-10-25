@@ -14,13 +14,13 @@ Laravel 13, Inertia Laravel, React 19.3, TypeScript, Vite, Tailwind CSS 4.3, dan
 
 Pemain FISCH yang ingin memahami value inventory, menemukan partner trade, menyusun listing, mencari item, dan menilai kelayakan pertukaran. Produk dipakai setara pada ponsel dan desktop, termasuk saat pengguna sedang bermain dan membutuhkan alur singkat yang mudah dipindai.
 
-Guest dapat melihat landing page, katalog, dan listing publik yang sudah diredaksi. Player mengelola profil, inventory, listing, pencarian, dan simulasi W/F/L. Administrator mengelola katalog, import, snapshot value, dan konfigurasi Fase 1.
+Guest dapat melihat landing page, katalog, dan listing publik yang sudah diredaksi. Player mengelola profil, inventory, listing, pencarian, simulasi W/F/L, negotiation, dan deal miliknya. Operator menangani trust operations terbatas. Administrator mengelola katalog, import, snapshot value, master Rod, thumbnail, dan konfigurasi operasional.
 
 ## Product Purpose
 
 Fisch Trade Center mengurangi ketidakpastian trade dengan menyatukan katalog, published value snapshot yang immutable, inventory self-declared, listing anonim, pencarian deterministik, dan simulasi W/F/L yang menyebut perspektif secara eksplisit.
 
-Fase 0–1 berhasil ketika alur akun, katalog, inventory, listing, search, dan simulasi berjalan end-to-end; data identitas lawan tetap teredaksi; invalid value import tidak mengganti snapshot aktif; dan seluruh jalur utama dapat dipakai pada viewport 360–1440 px.
+Target MVP berakhir pada Fase 4. Alur akun, katalog, inventory, listing, search, simulasi, negotiation, deal, dan reveal harus berjalan end-to-end. Wallet dan fee tetap nonaktif dengan `fee = 0`. Identitas lawan tetap teredaksi sampai final acceptance berhasil secara atomik.
 
 ## Positioning
 
@@ -30,19 +30,23 @@ Produk bukan sekadar papan listing: setiap hasil penilaian dan listing yang bern
 
 - Player mendaftar dengan email/password, memverifikasi email, mengisi USN/IGN manual yang tetap berstatus `unverified`, lalu mengelola inventory.
 - Player membuat listing dari inventory, mencari listing pemain lain, dan membandingkan dua sisi trade lewat simulator W/F/L.
-- Administrator memeriksa hasil import fixture, memublikasikan snapshot valid, dan mengatur Fair threshold serta listing expiry secara prospektif.
+- Administrator mengunggah CSV katalog/value ke staging, meninjau preview dan warning, lalu memublikasikan snapshot valid secara manual.
+- Administrator mengelola master Rod non-tradable, relasi Rod Skin, thumbnail item, Fair threshold, dan status katalog.
 - Bahasa UI pertama dipilih dari locale browser (`id` untuk Indonesia, selain itu `en`), dapat diganti, dan dipersist.
 - Dark theme adalah pengalaman default; light theme tetap tersedia dan dipersist.
 
 ## Capabilities and Constraints
 
-- Scope aktif: fondasi dan Fase 1—authentication, profile, catalog/value snapshot, inventory, listing, search, W/F/L, dan administrasi minimum terkait.
-- Di luar scope: negotiation, deal/reveal, wallet, payment, report/dispute penuh, dan admin finansial. Konektor Value List produksi untuk kategori `skin` termasuk dalam Fase 1.
+- Roadmap memakai Fase 0–6. Fase 0–2 mencakup fondasi, katalog/admin, inventory, listing, search, dan W/F/L. Fase 3–4 melengkapi MVP melalui negotiation, deal/reveal, dan trust operations minimum.
+- Wallet, payment, refund, compensation, dan dispute finansial berada di Fase 5 pasca-MVP. Production readiness berada di Fase 6.
 - Email wajib terverifikasi sebelum inventory, listing, atau simulator privat.
 - `fair_threshold_percent` awal adalah `10`; perubahan admin berlaku prospektif dan diaudit.
 - Listing aktif kedaluwarsa setelah 14 hari.
-- Value sync memakai provider contract dan fixture berversi. Provider produksi `skin` membaca ekspor CSV publik server-side, berjalan harian ke staging, menerapkan anomaly gate 25%, dan tetap fail-closed sampai diaktifkan melalui konfigurasi deployment.
-- Kategori awal adalah `skin`, `boat`, dan `fishing_rod`; model kategori tidak boleh menjadi enum tertutup.
+- Katalog/value berasal dari CSV UTF-8 yang diunggah admin. Upload hanya membuat staging; publish manual melakukan partial upsert dan membuat snapshot immutable secara atomik.
+- Perubahan value di atas 25% menghasilkan warning yang wajib dikonfirmasi. Baris dengan value kosong menghapus value item pada snapshot baru.
+- Kategori awal adalah `rod_skin`, `boat`, `relic_set`, dan `other`; model kategori tidak boleh menjadi enum tertutup.
+- Rod adalah metadata non-tradable. Rod Skin tanpa relasi menampilkan `Undefined Rod`.
+- Thumbnail menerima JPG/PNG/WebP maksimal 2 MB. Item tanpa thumbnail memakai fallback kategori.
 - Tidak ada migration, seed, scheduler, queue worker, atau import yang dijalankan terhadap database persisten oleh agent tanpa perintah eksplisit.
 
 ## Brand Commitments
@@ -58,7 +62,7 @@ Produk bukan sekadar papan listing: setiap hasil penilaian dan listing yang bern
 - PRD, knowledge, memory, dan ADR aktif di `docs/agents/`.
 - Referensi struktur UI: `https://keenthemes.com/metronic/tailwind/demo1/`.
 - Referensi warna: `C:/Users/dsw/Pictures/_temp/ss_vibe/Preview.__large_preview.jpg` dengan warna dominan terkuantisasi sekitar `#000010`, `#100040`, `#002080`, dan `#F0D000`.
-- Tidak ada logo, item artwork berizin, data produksi, testimonial, atau benchmark aktual. Comp dan fixture memakai konten synthetic yang diberi label jelas.
+- Tidak ada logo, item artwork berizin, data produksi, testimonial, atau benchmark PostgreSQL 100.000 listing yang tervalidasi. Comp dan fixture memakai konten synthetic yang diberi label jelas.
 
 ## Product Principles
 

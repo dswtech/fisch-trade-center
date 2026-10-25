@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Domain\Catalog\CatalogItemImage;
+use App\Domain\Catalog\CatalogValueCsvImportService;
 use App\Models\CatalogItem;
 use App\Models\Listing;
 use App\Models\ListingVersion;
@@ -78,6 +79,24 @@ final class CatalogValueCsvImportTest extends TestCase
         self::assertStringContainsString('rod_skin', $content);
     }
 
+    public function test_publish_rolls_back_catalog_and_snapshot_when_value_insert_fails(): void
+    {
+        $admin = $this->admin();
+        $csv = "item_key,category,name,aliases,value,offer_range,status\n,other,Rollback Item,,10,,active\n";
+        $this->actingAs($admin)->post('/admin/catalog-value-imports', ['file' => UploadedFile::fake()->createWithContent('rollback.csv', $csv)])->assertRedirect();
+        $import = DB::table('value_imports')->latest('id')->first();
+        DB::unprepared("CREATE TRIGGER fail_catalog_values BEFORE INSERT ON catalog_item_values BEGIN SELECT RAISE(ABORT, 'forced publish failure'); END");
+
+        try {
+            app(CatalogValueCsvImportService::class)->publish($import->public_id, $admin, false);
+            self::fail('Publish should fail inside the transaction.');
+        } catch (\Illuminate\Database\QueryException) {
+            self::assertDatabaseMissing('catalog_items', ['canonical_name' => 'Rollback Item']);
+            self::assertSame(0, DB::table('value_snapshots')->where('value_import_id', $import->id)->count());
+            self::assertSame(0, DB::table('audit_events')->where('event_type', 'catalog_value_import.published')->count());
+        }
+    }
+
     public function test_alias_matching_duplicate_ambiguous_category_and_decimal_validation(): void
     {
         $admin = $this->admin();
@@ -128,6 +147,13 @@ final class CatalogValueCsvImportTest extends TestCase
         $rod = DB::table('rods')->where('name', 'Aurora Rod')->first();
         $this->actingAs($admin)->patch("/admin/catalog-items/{$item->public_id}/rod", ['rodId' => $rod->public_id])->assertRedirect();
         self::assertDatabaseHas('catalog_items', ['id' => $item->id, 'rod_id' => $rod->id]);
+        $this->actingAs($admin)->patch("/admin/rods/{$rod->public_id}", ['name' => 'Aurora Rod Prime', 'isActive' => false])->assertRedirect();
+        self::assertDatabaseHas('rods', ['id' => $rod->id, 'name' => 'Aurora Rod Prime', 'is_active' => false]);
+        self::assertDatabaseHas('audit_events', ['event_type' => 'rod.updated', 'subject_public_id' => $rod->public_id]);
+        $this->actingAs($admin)->patch("/admin/catalog-items/{$item->public_id}/rod", ['rodId' => $rod->public_id])->assertSessionHasErrors('rodId');
+        $this->actingAs($admin)->patch("/admin/catalog-items/{$item->public_id}", ['aliasesText' => 'Aurora|Northern Light', 'isActive' => false])->assertRedirect();
+        self::assertSame(['Aurora', 'Northern Light'], $item->fresh()->aliases);
+        self::assertFalse($item->fresh()->is_active);
 
         $this->actingAs($admin)->post("/admin/catalog-items/{$item->public_id}/thumbnail", ['thumbnail' => UploadedFile::fake()->createWithContent('thumb.txt', 'not an image')])->assertSessionHasErrors('thumbnail');
         $this->actingAs($admin)->post("/admin/catalog-items/{$item->public_id}/thumbnail", ['thumbnail' => UploadedFile::fake()->create('too-large.png', 2049, 'image/png')])->assertSessionHasErrors('thumbnail');

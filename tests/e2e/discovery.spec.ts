@@ -3,7 +3,8 @@ import {expect,test} from '@playwright/test';
 test('public discovery supports filters, theme persistence, redaction, and responsive width',async({page})=>{
   await page.goto('/');
   await expect(page).toHaveTitle(/Discover Trades|Temukan Trade/);
-  await expect(page.getByText('SYNTHETIC DEMO DATA')).toHaveCount(1);
+  await expect(page.locator('.demo-badge')).toHaveCount(0);
+  await expect(page.locator('.recommendation-card').getByRole('link',{name:/Open simulator|Buka simulator/})).toBeVisible();
 
   const filterButton=page.getByRole('button',{name:/Filters|Filter/});
   await filterButton.click();

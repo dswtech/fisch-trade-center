@@ -31,9 +31,10 @@ final class AdminController extends Controller
             ->leftJoin('rods', 'rods.id', '=', 'ci.rod_id')
             ->whereIn('cc.key', array_keys((array) config('catalog.categories')))
             ->orderBy('cc.name')->orderBy('ci.canonical_name')
-            ->get(['ci.public_id as id', 'ci.canonical_name as name', 'cc.key as categoryKey', 'cc.name as category', 'ci.thumbnail_path as thumbnailPath', 'rods.public_id as rodId', 'rods.name as rodName'])
+            ->get(['ci.public_id as id', 'ci.canonical_name as name', 'ci.aliases', 'ci.is_active as isActive', 'cc.key as categoryKey', 'cc.name as category', 'ci.thumbnail_path as thumbnailPath', 'rods.public_id as rodId', 'rods.name as rodName'])
             ->map(fn ($item): array => [
                 'id' => $item->id, 'name' => $item->name, 'category' => $item->category, 'categoryKey' => $item->categoryKey,
+                'aliases' => json_decode($item->aliases ?? '[]', true) ?: [], 'isActive' => (bool) $item->isActive,
                 'rodId' => $item->rodId, 'rodName' => $item->rodName ?? 'Undefined Rod',
                 'thumbnailUrl' => CatalogItemImage::url($item->thumbnailPath, $item->categoryKey), 'hasThumbnail' => $item->thumbnailPath !== null,
             ]);
@@ -41,7 +42,7 @@ final class AdminController extends Controller
         return Inertia::render('admin', [
             'imports' => $imports,
             'fairThreshold' => DB::table('system_settings')->where('key', 'fair_threshold_percent')->value('value'),
-            'rods' => DB::table('rods')->orderBy('name')->get(['public_id as id', 'name']),
+            'rods' => DB::table('rods')->orderByDesc('is_active')->orderBy('name')->get(['public_id as id', 'name', 'is_active as isActive']),
             'catalogItems' => $items,
         ]);
     }
