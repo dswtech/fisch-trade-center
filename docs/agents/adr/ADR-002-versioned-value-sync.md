@@ -1,6 +1,6 @@
 # ADR-002 — Sinkronisasi value server-side menjadi snapshot berversi
 
-**Status:** Berlaku · **Ditetapkan:** 24 Oktober 2026 · **Rujukan:** CAT-03 sampai CAT-06, REC-02 sampai REC-05
+**Status:** Digantikan sebagian ADR-008 untuk cara akuisisi sumber; snapshot berversi tetap berlaku · **Ditetapkan:** 24 Oktober 2026 · **Rujukan:** CAT-03 sampai CAT-06, REC-02 sampai REC-05
 
 ## Keadaan
 

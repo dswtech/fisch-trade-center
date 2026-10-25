@@ -3,18 +3,18 @@
 | Item | Keterangan |
 |---|---|
 | Dokumen | PRD — Fisch Trade Center |
-| Versi | v1.2 (Disetujui untuk Fase 0–1) |
+| Versi | v1.4 (Roadmap capability 0–6) |
 | Tanggal | 25 Oktober 2026 |
 | Disusun oleh | Product |
 | Audiens | Product Owner, Engineering, Design, QA, dan Operations |
-| Status | Disetujui untuk Fase 0–1; keputusan Fase 2–3 tetap terbuka |
+| Status | Target MVP Fase 0–4; monetisasi Fase 5 tetap tertahan keputusan produk |
 
 | Item | Keterangan |
 |---|---|
 | Induk | Tidak ada — dokumen produk utama |
 | Cakupan | Trade discovery sampai final deal, serta fase wallet dan pembayaran |
 | Requirement | 69 aktif |
-| Prasyarat | Sumber katalog/value yang dapat digunakan; keputusan pembayaran sebelum Fase 3 |
+| Prasyarat | Sumber katalog/value yang dapat digunakan; keputusan pembayaran sebelum Fase 5 |
 | Aturan ID | ID tidak boleh digunakan ulang dan hanya didefinisikan dalam dokumen ini |
 
 ## 1. Ringkasan Eksekutif
@@ -23,7 +23,7 @@ Fisch Trade Center adalah aplikasi web yang membantu pemain FISCH menemukan part
 
 Nilai utamanya bukan sekadar membuat listing. Sistem mengurangi ketidakpastian saat pemain tidak mengetahui value atau tidak tahu kombinasi item apa yang layak ditawarkan. Semua rekomendasi dan proposal memakai value snapshot yang sama sehingga perubahan sumber value di kemudian hari tidak menulis ulang sejarah keputusan.
 
-Produk dirilis bertahap. Fase awal membuktikan katalog, inventory, listing, search, dan W/F/L. Fase kedua menambahkan rekomendasi, negosiasi, pra-deal, final deal, dan reveal identitas. Fase ketiga menambahkan deposit, saldo, serta biaya layanan melalui payment gateway abstraction.
+Produk dirilis melalui fase capability. Target MVP mencakup fondasi, katalog, trade core, negotiation, dan final deal/reveal tanpa pembayaran. Wallet, deposit, serta biaya layanan berada pada fase pasca-MVP setelah keputusan finansial ditutup.
 
 ## 2. Latar Belakang & Permasalahan
 
@@ -55,7 +55,7 @@ Identitas Roblox juga perlu dilindungi selama penjajakan. Membukanya sejak listi
 | Tidak menyediakan chat bebas | Negosiasi dan pemilihan server memakai field terstruktur untuk mengurangi moderasi dan kebocoran identitas. |
 | Tidak menentukan harga pasar sendiri | Sistem memproses sumber value yang dipilih; ia tidak mengklaim value sebagai harga resmi Fisch/Roblox. |
 | Tidak menjual item | Saldo hanya membayar layanan platform, bukan membeli item atau menjamin nilai tukar item. |
-| Tidak mengaktifkan kategori di luar cakupan awal | Hanya Skins, Boats, dan Fishing Rods yang aktif pada rilis awal walaupun model kategori generik. |
+| Tidak mengaktifkan kategori di luar cakupan awal | Hanya Rod Skin, Boats, Relic & Sets, dan Lain-lain yang aktif pada rilis awal walaupun model kategori generik. Rod hanya metadata non-tradable. |
 
 ## 4. Pengguna & Peran
 
@@ -64,13 +64,14 @@ Identitas Roblox juga perlu dilindungi selama penjajakan. Membukanya sejak listi
 | Guest | Melihat landing page, katalog publik, penjelasan value, dan listing yang sudah diredaksi. | Tidak melihat identitas, inventory privat, detail negosiasi, saldo, atau audit. |
 | Player | Mengelola profil, inventory, listing, pencarian, rekomendasi, negosiasi, deal, dan wallet miliknya. | Tidak melihat identitas lawan sebelum reveal; tidak mengubah item/value snapshot atau ledger; tidak bertindak atas transaksi pengguna lain. |
 | Operator/Support | Menangani report dan dispute sesuai kewenangan terbatas serta melihat audit yang diperlukan. | Tidak mengubah value, saldo, atau identitas; tidak melihat detail pembayaran di luar kebutuhan kasus. |
-| Administrator | Mengelola katalog, sync, threshold, fee, status pengguna, dan kebijakan operasional. | Tidak menghapus audit/ledger atau mengganti snapshot historis; tindakan sensitif wajib tercatat. |
+| Administrator | Mengelola katalog/import, threshold, fee, status pengguna, dan kebijakan operasional. | Tidak menghapus audit/ledger atau mengganti snapshot historis; tindakan sensitif wajib tercatat. |
 
 ## 5. Konsep Utama
 
 | Konsep | Penjelasan |
 |---|---|
-| Catalog Item | Definisi canonical untuk sebuah Skin, Boat, atau Fishing Rod; berbeda dari klaim inventory milik pengguna. |
+| Catalog Item | Definisi canonical untuk sebuah Rod Skin, Boat, Relic & Set, atau item Lain-lain; berbeda dari klaim inventory milik pengguna. |
+| Rod | Master data non-tradable yang dapat dihubungkan ke Rod Skin. Skin tanpa relasi menampilkan `Undefined Rod`. |
 | Inventory Entry | Klaim pengguna atas catalog item dan quantity; bukan bukti kepemilikan terverifikasi. |
 | Value Import | Hasil pengambilan dan validasi satu sumber eksternal yang belum tentu dipublikasikan. |
 | Value Snapshot | Sekumpulan value immutable yang telah dipublikasikan dan memiliki version ID. |
@@ -92,7 +93,7 @@ Point value dapat berupa pecahan sampai dua angka desimal dan harus dipertahanka
 |---|---|---|---|
 | 1 | Guest | Mendaftar dengan email dan password. | Akun dibuat dan menunggu/selesai verifikasi email sesuai kebijakan authentication. |
 | 2 | Player | Mengisi USN dan IGN. | Identitas tersimpan sebagai data privat, belum terverifikasi. |
-| 3 | Player | Menambahkan Skins, Boats, atau Fishing Rods ke inventory. | Inventory siap dipakai listing dan rekomendasi. |
+| 3 | Player | Menambahkan Rod Skin, Boats, Relic & Sets, atau item Lain-lain ke inventory. | Inventory siap dipakai listing dan rekomendasi. |
 
 ### 6.2 Mencari barang
 
@@ -145,16 +146,16 @@ Prioritas: `M` Must, `S` Should, `C` Could, dan `W` Won't untuk cakupan rilis sa
 | ACC-05 | **OAuth atau verifikasi identitas Roblox tidak dikerjakan pada fase awal.** Batas ini mencegah klaim verifikasi semu sebelum integrasi resmi dirancang. | W |
 | ACC-06 | **Email wajib terverifikasi sebelum player mengelola inventory, memublikasikan listing, atau memakai simulator privat.** Katalog dan discovery publik tetap dapat dibaca tanpa verifikasi. | M |
 
-### 7.2 Katalog dan sinkronisasi value
+### 7.2 Katalog dan import value
 
 | ID | Kebutuhan | Prioritas |
 |---|---|---|
 | CAT-01 | **Sistem menyimpan catalog item dengan stable internal ID, category, canonical name, alias, provenance, dan status.** Nama eksternal tidak menjadi primary key karena dapat berubah. | M |
-| CAT-02 | **Kategori aktif awal adalah Skins, Boats, dan Fishing Rods.** Model kategori tetap extensible agar kategori baru tidak menuntut redesign schema. | M |
-| CAT-03 | **Scheduler server mengambil sumber value secara berkala ke area staging.** Browser tidak mengambil Google Sheets atau wiki secara langsung agar credential, validasi, dan availability terkendali. | M |
-| CAT-04 | **Import wajib memvalidasi kolom, tipe, duplikasi, nilai negatif, kategori, dan jumlah perubahan anomali sebelum publikasi.** Import invalid tidak mengganti snapshot aktif. | M |
-| CAT-05 | **Admin memublikasikan atau menyetujui snapshot value yang lolos validasi sesuai mode operasional.** Snapshot published immutable dan memiliki version, source timestamp, imported timestamp, serta checksum. | M |
-| CAT-06 | **Fisch Wiki hanya memperkaya metadata katalog dan tidak menjadi sumber harga.** Kegagalan wiki tidak menghapus value atau item yang sudah terbit. | S |
+| CAT-02 | **Kategori aktif awal adalah Rod Skin, Boats, Relic & Sets, dan Lain-lain.** Rod merupakan metadata non-tradable; model kategori tetap extensible. | M |
+| CAT-03 | **Administrator mengunggah CSV UTF-8 secara berkala ke staging.** Upload bersifat partial upsert, tidak mengaktifkan data sebelum review dan publish manual. | M |
+| CAT-04 | **Import memvalidasi header, tipe, key, duplikasi, kategori, status, formula injection, dan presisi value sebelum publikasi.** Perubahan value di atas 25% menjadi warning yang memerlukan konfirmasi; import invalid tidak mengganti snapshot aktif. | M |
+| CAT-05 | **Admin memublikasikan import valid secara atomik menjadi perubahan katalog dan snapshot value lengkap yang immutable.** Baris yang tidak diunggah dipertahankan dan value kosong menghapus value item pada snapshot baru. | M |
+| CAT-06 | **Admin dapat mengelola relasi Rod dan thumbnail item secara manual.** Thumbnail hanya JPG/PNG/WebP maksimal 2 MB; item tanpa thumbnail memakai gambar default kategori. | S |
 
 ### 7.3 Inventory
 
@@ -173,7 +174,7 @@ Prioritas: `M` Must, `S` Should, `C` Could, dan `W` Won't untuk cakupan rilis sa
 | LST-02 | **Offered quantity tidak boleh melebihi quantity inventory saat listing dipublikasikan.** Penjagaan diulang saat proposal dan finalisasi karena inventory dapat berubah. | M |
 | LST-03 | **Listing aktif menampilkan alias anonim, komposisi item, value version, umur listing, dan status tanpa USN/IGN.** Ini memungkinkan discovery tanpa membuka identitas. | M |
 | LST-04 | **Player dapat membatalkan listing miliknya.** Pembatalan mencegah negosiasi baru tetapi tidak menghapus audit atau negotiation yang sudah ada. | M |
-| LST-05 | **Listing Fase 1 kedaluwarsa 14 hari setelah dipublikasikan.** Listing expired tidak muncul sebagai aktif dan tidak dapat menerima proposal baru; kebijakan expiry Fase 2 tetap keputusan terpisah. | S |
+| LST-05 | **Listing MVP kedaluwarsa 14 hari setelah dipublikasikan.** Listing expired tidak muncul sebagai aktif dan tidak dapat menerima proposal baru; kebijakan expiry negotiation dan deal tetap keputusan terpisah. | S |
 | LST-06 | **Edit material pada listing aktif membuat versi listing baru atau menginvalidasi proposal terkait.** Komposisi yang telah dilihat lawan tidak boleh berubah diam-diam. | M |
 
 ### 7.5 Search dan discovery
@@ -183,7 +184,7 @@ Prioritas: `M` Must, `S` Should, `C` Could, dan `W` Won't untuk cakupan rilis sa
 | SRC-01 | **Player dapat mencari listing berdasarkan wanted item, offered item, kategori, value range, dan freshness.** Default hanya menampilkan listing aktif milik pengguna lain. | M |
 | SRC-02 | **Hasil search dipaginasi dan memiliki urutan deterministik.** Pagination tidak boleh menduplikasi atau melompati listing pada cursor yang sama. | M |
 | SRC-03 | **Guest hanya melihat hasil publik yang telah diredaksi.** Tindakan trade mengarahkan guest untuk authentication. | S |
-| SRC-04 | **Search tetap dapat digunakan saat value sync terbaru gagal.** Sistem memakai published snapshot terakhir dan menampilkan umur datanya. | M |
+| SRC-04 | **Search tetap dapat digunakan saat upload/import value terbaru gagal.** Sistem memakai published snapshot terakhir dan menampilkan umur datanya. | M |
 | SRC-05 | **Pencarian fuzzy menggunakan alias katalog yang dikurasi.** Sistem tidak membuat catalog item baru hanya karena typo pengguna. | C |
 
 ### 7.6 Rekomendasi dan W/F/L
@@ -251,10 +252,10 @@ Prioritas: `M` Must, `S` Should, `C` Could, dan `W` Won't untuk cakupan rilis sa
 | AUD-01 | **Sistem mencatat actor, action, target, before/after aman, timestamp, request correlation, dan reason untuk tindakan sensitif.** Secret dan data identitas yang belum boleh terungkap harus diredaksi. | M |
 | AUD-02 | **Riwayat proposal, listing version, value snapshot, ledger, payment event, dan reveal tidak dapat dihapus melalui fitur aplikasi biasa.** Retensi mengikuti kebijakan yang akan disetujui. | M |
 | AUD-03 | **Operator hanya melihat audit yang diperlukan untuk kasus yang ditangani.** Access audit itu sendiri turut dicatat. | S |
-| AUD-04 | **Administrator dapat melihat status sync, anomali import, snapshot aktif, dan umur sumber.** Admin tidak dapat mengedit snapshot published. | M |
+| AUD-04 | **Administrator dapat melihat status import, anomali, snapshot aktif, dan umur sumber.** Admin tidak dapat mengedit snapshot published. | M |
 | ADM-01 | **Administrator dapat mengaktifkan/nonaktifkan catalog item dan mengelola alias tanpa mengubah identitas historis item.** Deal lama tetap menunjuk snapshot nama/value-nya. | M |
 | ADM-02 | **Administrator dapat mengatur Fair threshold, expiry, fee, dan feature flag dengan validasi serta audit.** Perubahan berlaku prospektif dan tidak menghitung ulang deal lama. | M |
-| ADM-03 | **Administrator dapat menjalankan retry sync yang aman tanpa memublikasikan data invalid.** Retry tidak membuat snapshot published duplikat untuk checksum yang sama. | S |
+| ADM-03 | **Administrator dapat meninjau ulang dan memublikasikan staging upload secara idempotent tanpa memublikasikan data invalid.** Replay tidak membuat snapshot published duplikat untuk checksum yang sama. | S |
 | ADM-04 | **Administrator dapat suspend akun sesuai reason dan durasi.** Suspension mencegah tindakan baru tetapi tidak menghapus audit, ledger, atau deal. | S |
 | ADM-05 | **Operator dapat menangani report/dispute melalui status dan reason code terstruktur.** Kebijakan resolusi finansial tetap tertahan sampai Bagian 14 diputuskan. | C |
 
@@ -294,8 +295,7 @@ Aturan yang tidak dapat ditegakkan penuh oleh database—terutama redaksi identi
 
 | Modul/Sistem | Arah ketergantungan | Yang dipertukarkan |
 |---|---|---|
-| Google Sheets Value List | Fisch Trade Center bergantung pada sumber eksternal untuk kandidat value. | Name, value, offer range, stock/cost metadata bila tersedia, source timestamp/checksum. |
-| Fisch Wiki | Import metadata bergantung pada wiki; trade runtime tidak boleh bergantung langsung. | Canonical/alias candidate, category metadata, source URL, image/description yang diizinkan. |
+| CSV administrasi | Administrator mengunggah sumber katalog dan value yang telah dikurasi. | Stable item key, category, canonical name, aliases, value, offer range, dan status. |
 | Payment Gateway | Fase wallet memanggil provider dan menerima callback provider. | Deposit intent, merchant reference, amount/currency, expiry, status, signature metadata. |
 | Email Provider | Authentication/notifikasi server mengirim email. | Alamat tujuan, template, verification/reset token berumur pendek. |
 | Roblox/Fisch | Tidak ada integrasi runtime pada fase awal. | Tidak berlaku; USN/IGN dan inventory dimasukkan manual. |
@@ -314,19 +314,22 @@ Seluruh integrasi eksternal berada di server. Kegagalan integrasi tidak boleh me
 | Privacy | USN/IGN tidak muncul pada response lawan, event analytics, atau log sebelum reveal; diuji otomatis. |
 | Accessibility | Alur utama memenuhi WCAG 2.2 AA untuk keyboard, focus, label, contrast, dan error announcement. |
 | Responsive UI | Alur utama berfungsi pada viewport 360 px sampai desktop 1440 px tanpa horizontal overflow yang menghalangi aksi. |
-| Observability | 100% finalization, payment callback, sync publish/fail, dan admin configuration change mempunyai correlation ID dan audit event. |
+| Observability | 100% finalization, payment callback, import publish/fail, dan admin configuration change mempunyai correlation ID dan audit event. |
 | Recovery | Backup/restore target ditetapkan sebelum production; sementara itu production launch tertahan. |
 
 ## 12. Tahapan Rilis
 
-| Fase | Cakupan minimum | Gerbang keluar |
-|---|---|---|
-| Fase 0 — Fondasi | Dokumen, architecture skeleton, authentication skeleton, CI/test baseline, server-only config. | PRD/ADR disetujui; dependency disetujui; test pipeline bersih; tidak ada secret client. |
-| Fase 1 — Discover & Value | Akun, profil manual, katalog/sync, inventory, listing, search, simulasi W/F/L. | Seluruh Must terkait lulus; invalid sync mempertahankan snapshot lama; search p95 target tercapai; redaction test bersih. |
-| Fase 2 — Negotiate & Deal | Rekomendasi kombinasi, negotiation terstruktur, pra-deal, final deal tanpa fee produksi atau dengan feature flag off, reveal. | Concurrency dan stale-version test bersih; 0 reveal prematur; disclaimer non-escrow ditampilkan; operasional report minimum tersedia. |
-| Fase 3 — Wallet & Monetization | Deposit, ledger, fee, payment callback, refund/compensation, dispute operations. | Seluruh keputusan pembayaran ditutup; review keamanan selesai; reconciliation dan idempotency test bersih; runbook insiden tersedia. |
+| Fase | Cakupan minimum | Requirement utama | Gerbang keluar |
+|---|---|---|---|
+| Fase 0 — Fondasi & Security Baseline | Dokumen, authentication, CI/test baseline, idempotency, dan server-only config. | ACC-01–ACC-06 | Endpoint privat terlindungi; pipeline bersih; tidak ada secret client. |
+| Fase 1 — Catalog Data & Admin | CSV staging/publish, kategori, snapshot, Rod, thumbnail, dan administrasi katalog. | CAT-01–CAT-06, AUD-04, ADM-01, ADM-03 | Import invalid tidak mengubah snapshot aktif; publish atomik/idempotent; admin route, UI, authorization, dan audit lulus. |
+| Fase 2 — Player Trade Core | Inventory, listing, discovery, search, dan simulator W/F/L. | INV-01–INV-04, LST-01–LST-06, SRC-01–SRC-05 | Alur UI lengkap; stale inventory ditolak; redaction bersih; search p95 tercapai. |
+| Fase 3 — Recommendation & Negotiation | Rekomendasi inventory dan negotiation terstruktur sampai proposal diterima. | REC-01–REC-06, NEG-01–NEG-07 | Route/UI operasional; stale version, invalidation, expiry, authorization, dan concurrency test lulus. |
+| Fase 4 — Pre-deal, Reveal & Trust Operations | Pilihan server, final deal `fee = 0`, reveal terbatas, report, suspension, dan audit operator. | NEG-08, DEL-01–DEL-08, AUD-01–AUD-03, ADM-02, ADM-04–ADM-05 | Tidak ada reveal prematur; finalisasi/retry atomik; disclaimer tampil; minimum trust operations tersedia. |
+| Fase 5 — Wallet, Payment & Dispute Finansial | Deposit, ledger, fee, callback, refund/compensation, dan dispute finansial. | WAL-01–WAL-06, PAY-01–PAY-05 | Keputusan pembayaran ditutup; review keamanan, reconciliation, idempotency, dan runbook insiden lulus. |
+| Fase 6 — Production Readiness & Launch | Migration rollout, observability, retention, backup/restore, monitoring, dan runbook. | Seluruh NFR dan gerbang operasional | Suite lengkap lulus; RPO/RTO dan retention disetujui; rollout serta rollback tervalidasi. |
 
-Fase tidak boleh dilompati hanya karena UI berikutnya selesai. Gerbang data integrity dan privasi wajib dipenuhi sebelum fitur dibuka.
+Target MVP berakhir pada Fase 4 dengan wallet dan fee nonaktif. Fase 5 tidak menghambat MVP selama UI menyatakan biaya nol secara jelas. Detail status, bukti, gap, dan backlog setiap fase berada di [`development-phases.md`](../development-phases.md). Fase tidak boleh dilompati hanya karena UI atau service berikutnya tersedia.
 
 ## 13. Ukuran Keberhasilan
 
@@ -338,7 +341,7 @@ Fase tidak boleh dilompati hanya karena UI berikutnya selesai. Gerbang data inte
 | Stale/invalid prevention | 100% fixture proposal basi, inventory berubah, dan listing expired ditolak. |
 | Privacy | 0 insiden USN/IGN terungkap sebelum deal `revealed`. |
 | Financial integrity | Selisih reconciliation ledger dan provider = 0 untuk transaksi settled setelah memperhitungkan event pending/reversal. |
-| Data freshness | Umur snapshot dan status sync terlihat; target SLA ditutup setelah akses sumber produksi disepakati. |
+| Data freshness | Umur snapshot dan status import terlihat; target SLA ditutup setelah proses operasional upload disepakati. |
 
 Ukuran conversion belum diberi target numerik sebelum baseline karena angka tanpa sumber akan menyesatkan. Setelah 30 hari data valid, Product menetapkan target dan mencatat sumber serta tanggalnya.
 
@@ -346,14 +349,14 @@ Ukuran conversion belum diberi target numerik sebelum baseline karena angka tanp
 
 | No | Pertanyaan | Pemutus | Yang tertahan | Prioritas |
 |---|---|---|---|---|
-| 1 | Payment provider, metode, mata uang, minimum/maksimum deposit, dan settlement mana yang digunakan? | Product Owner + Finance + Engineering | PAY-02 sampai PAY-05 dan aktivasi Fase 3 | Tinggi |
+| 1 | Payment provider, metode, mata uang, minimum/maksimum deposit, dan settlement mana yang digunakan? | Product Owner + Finance + Engineering | PAY-02 sampai PAY-05 dan aktivasi Fase 5 | Tinggi |
 | 2 | Berapa fee per pihak, kapan quote kedaluwarsa, serta kapan refund diberikan? | Product Owner + Finance | DEL-03 sampai DEL-05, WAL-02, kebijakan dispute | Tinggi |
 | 3 | ~~Berapa nilai awal `fair_threshold_percent` dan siapa yang menyetujui perubahannya?~~ | Tertutup 24 Oktober 2026: nilai awal ±10%; admin boleh mengubah secara prospektif dan setiap perubahan wajib diaudit. | REC-04 | Tinggi |
-| 4 | Berapa expiry listing, proposal, negotiation, pra-deal, dan identity reveal access? | Tertutup sebagian 24 Oktober 2026: listing Fase 1 = 14 hari; expiry Fase 2 tetap terbuka. | NEG-06, DEL-03 | Sedang |
+| 4 | Berapa expiry listing, proposal, negotiation, pra-deal, dan identity reveal access? | Tertutup sebagian 24 Oktober 2026: listing MVP = 14 hari; expiry Fase 3–4 tetap terbuka. | NEG-06, DEL-03 | Sedang |
 | 5 | Bagaimana report, no-show, scam allegation, suspend, dispute, refund, dan appeal ditangani? | Product Owner + Operations + Legal | ADM-04, ADM-05, production monetization | Tinggi |
-| 6 | ~~Apakah penggunaan/sinkronisasi Value List dan metadata wiki telah memperoleh izin serta akses produksi yang stabil?~~ | Tertutup sebagian 25 Oktober 2026: ekspor CSV publik `Value List Proto — Skins` disetujui untuk kategori `skin`; fetch dilakukan harian pukul 02.00 Asia/Jakarta ke staging, perubahan di atas 25% ditolak sebagai anomali, dan snapshot dipublikasikan manual oleh admin. Metadata wiki serta sumber value kategori lain tetap memerlukan persetujuan tersendiri. | CAT-03 sampai CAT-06 dan SLA freshness kategori selain `skin` | Tinggi |
+| 6 | ~~Bagaimana sumber katalog, value, metadata Rod, dan gambar diperbarui?~~ | Tertutup 25 Oktober 2026: admin mengunggah CSV partial-upsert ke staging dan memublikasikannya manual; Rod serta thumbnail dikelola terpisah di admin. Tidak ada fetch atau scheduler sumber eksternal. | CAT-03 sampai CAT-06 | Tinggi |
 | 7 | Berapa retensi audit, proposal, identity snapshot, payment event, dan data akun setelah penghapusan akun? | Product Owner + Legal + Security | AUD-02, privacy policy, production launch | Tinggi |
-| 8 | Berapa target RPO/RTO dan strategi backup/restore produksi? | Engineering + Product Owner | Gerbang production Fase 1 | Sedang |
+| 8 | Berapa target RPO/RTO dan strategi backup/restore produksi? | Engineering + Product Owner | Gerbang Fase 6 | Sedang |
 
 Setelah diputuskan, baris tidak dihapus. Pertanyaan dicoret dan kolom Pemutus diganti dengan `Tertutup [tanggal]: [keputusan dan alasan]`; keputusan arsitektur yang mahal dibalik naik menjadi ADR baru.
 
@@ -361,7 +364,7 @@ Setelah diputuskan, baris tidak dihapus. Pertanyaan dicoret dan kolom Pemutus di
 
 | Risiko | Dampak | Mitigasi |
 |---|---|---|
-| Value List tidak resmi berubah format, salah, atau hilang | Rekomendasi salah atau sync berhenti. | Staging validation, anomaly threshold, checksum, published snapshot immutable, last-known-good fallback, umur sumber terlihat. |
+| CSV admin salah format atau memuat perubahan value tidak disengaja | Katalog atau rekomendasi salah. | Staging validation, preview diff, warning perubahan di atas 25%, konfirmasi publish, checksum, dan published snapshot immutable. |
 | Nama item berbeda antar sumber | Duplikasi atau value menempel ke item salah. | Stable internal ID, curated aliases, manual mapping queue, larang auto-create dari fuzzy match. |
 | Inventory/identitas palsu | Waktu pengguna terbuang dan potensi scam. | Label unverified, report/suspend, disclaimer, verifikasi Roblox sebagai fase terpisah. |
 | Identitas bocor lewat serializer/log/cache | Privasi tidak dapat dipulihkan. | DTO/redaction terpisah, server-only policies, privacy regression tests, log scrubbing, cache scope per user/deal. |

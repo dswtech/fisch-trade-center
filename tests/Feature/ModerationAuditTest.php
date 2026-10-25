@@ -4,8 +4,6 @@ namespace Tests\Feature;
 
 use App\Domain\Audit\AuditRecorder;
 use App\Domain\Catalog\CatalogAdminService;
-use App\Domain\Catalog\CatalogMetadataImportService;
-use App\Domain\Catalog\DisabledCatalogMetadataSource;
 use App\Domain\Moderation\SuspensionService;
 use App\Http\Middleware\RejectSuspendedMutation;
 use App\Http\Middleware\RequireOperator;
@@ -89,7 +87,7 @@ final class ModerationAuditTest extends TestCase
     {
         $admin = $this->user('catalog-admin@example.test', 'admin');
         $categoryId = DB::table('catalog_categories')->insertGetId([
-            'public_id' => (string) Str::uuid(), 'key' => 'skin', 'name' => 'Skins', 'is_active' => true, 'created_at' => now(), 'updated_at' => now(),
+            'public_id' => (string) Str::uuid(), 'key' => 'rod_skin', 'name' => 'Rod Skin', 'is_active' => true, 'created_at' => now(), 'updated_at' => now(),
         ]);
         $first = CatalogItem::create(['category_id' => $categoryId, 'canonical_name' => 'Aurora', 'aliases' => [], 'is_active' => true]);
         CatalogItem::create(['category_id' => $categoryId, 'canonical_name' => 'Abyssal', 'aliases' => ['Deep'], 'is_active' => true]);
@@ -102,16 +100,6 @@ final class ModerationAuditTest extends TestCase
 
         $this->expectException(\Symfony\Component\HttpKernel\Exception\HttpException::class);
         $service->update($first->fresh(), $admin, true, ['deep']);
-    }
-
-    public function test_disabled_metadata_source_stages_failure_without_changing_catalog(): void
-    {
-        $before = DB::table('catalog_items')->count();
-        $result = (new CatalogMetadataImportService(new DisabledCatalogMetadataSource))->import();
-
-        self::assertSame('failed', $result['status']);
-        self::assertSame('source_unavailable', $result['import']->validation_errors[0]['code']);
-        self::assertSame($before, DB::table('catalog_items')->count());
     }
 
     private function user(string $email, string $role = 'player'): User

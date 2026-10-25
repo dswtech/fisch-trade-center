@@ -34,8 +34,8 @@ test('combined filters expose loading state and continue with a deterministic cu
   await page.goto('/search');
   await page.getByRole('button',{name:/Filters|Filter/}).click();
   await page.getByLabel('Offered item').selectOption({label:'Abyssal Current'});
-  await page.getByLabel('Wanted item').selectOption({label:'Aurora Rod'});
-  await page.getByLabel('Category').selectOption({label:'Skins'});
+  await page.getByLabel('Wanted item').selectOption({label:'Tidebreaker'});
+  await page.getByLabel('Category').selectOption({label:'Rod Skin'});
   await page.getByLabel('Minimum value').fill('2400');
   await page.getByLabel('Maximum value').fill('2400');
   await page.getByLabel('Freshness').selectOption('hour');

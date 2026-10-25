@@ -3,8 +3,8 @@
 | Item | Keterangan |
 |---|---|
 | Dokumen | Knowledge domain dan implementasi |
-| Versi | v1.0 |
-| Tanggal | 24 Oktober 2026 |
+| Versi | v1.1 |
+| Tanggal | 25 Oktober 2026 |
 | Pemilik | Product |
 | Status | Berlaku |
 
@@ -26,15 +26,22 @@
 | Pra-deal | Tahap setelah komposisi item diterima, ketika kedua pihak memilih Public atau Private Server. |
 | Final deal | Persetujuan terakhir kedua pihak yang memicu debit biaya dan reveal identitas secara atomik. |
 
+## Batas fase aktif
+
+Roadmap delivery memakai Fase 0–6 yang didefinisikan di [`development-phases.md`](development-phases.md). Target MVP berhenti pada Fase 4: final deal dan reveal berjalan dengan wallet serta fee nonaktif dan `fee = 0`. Wallet, payment, serta dispute finansial berada pada Fase 5 dan tidak boleh diaktifkan sebagian sebelum keputusan produk terkait ditutup. Fase 6 adalah gerbang operasional production.
+
+Schema, service, atau UI statis tidak cukup untuk menyatakan fase selesai. Capability harus memiliki jalur HTTP yang dapat digunakan, authorization, UI operasional bila diperlukan, dan automated test sesuai gerbang fasenya.
+
 ## Katalog awal
 
 Katalog awal hanya mengaktifkan kategori berikut, tetapi entity kategori tidak boleh berupa enum tertutup agar kategori baru dapat ditambah tanpa perubahan schema besar:
 
-- `skin` — metadata nama dan gambar dapat diperkaya dari sumber katalog; value berasal dari Value List.
-- `boat` — metadata berasal dari Fisch Wiki; value hanya ada bila tersedia dalam sumber value yang disetujui.
-- `fishing_rod` — metadata berasal dari Fisch Wiki; value hanya ada bila tersedia dalam sumber value yang disetujui.
+- `rod_skin` — skin untuk sebuah Rod dan merupakan item trade; relasi Rod bersifat metadata non-tradable.
+- `boat` — boat yang dapat diperdagangkan.
+- `relic_set` — relic atau set yang dapat diperdagangkan.
+- `other` — item trade lain yang belum memiliki kategori khusus.
 
-Setiap item katalog memiliki stable internal ID, category key, canonical name, aliases, optional image/source URL, status aktif, dan provenance. Nama eksternal tidak dipakai sebagai primary key.
+Setiap item katalog memiliki stable internal ID, category key, canonical name, aliases, optional thumbnail, status aktif, dan provenance. Nama eksternal tidak dipakai sebagai primary key. Rod disimpan pada master terpisah dan tidak dapat dimasukkan ke inventory/listing. Rod Skin tanpa relasi menampilkan `Undefined Rod`.
 
 ## Value dan W/F/L
 
@@ -53,9 +60,9 @@ delta_percent = (delta / give_total) * 100
 - Sistem fail-closed: bila ambang Fair, value item, atau published snapshot tidak tersedia, tampilkan `Tidak dapat dinilai` dan jangan mengarang nilai.
 - Semua item dalam satu perhitungan harus berasal dari snapshot yang sama. Offer range ditampilkan terpisah dan tidak dicampur ke point value.
 
-Sumber produksi awal untuk value `skin` adalah ekspor CSV publik `Value List Proto — Skins`. Server mengambilnya setiap hari pukul 02.00 `Asia/Jakarta` ke staging. Import tidak dipublikasikan otomatis; admin hanya dapat memublikasikan import valid. Perubahan jumlah baris atau value item di atas 25% terhadap snapshot `skin` aktif dari `source_key` yang sama ditolak sebagai anomali. Import pertama suatu sumber tidak dibandingkan dengan snapshot fixture atau sumber lain. Nilai tepat 25% masih diterima. Boats dan Fishing Rods tetap tanpa value sampai sumbernya disetujui.
+Katalog dan value produksi berasal dari CSV UTF-8 yang diunggah admin. Upload bersifat partial upsert dan hanya masuk staging. Baris yang tidak tercantum tidak berubah; value kosong menghapus value item dari snapshot berikutnya. Publish membawa seluruh value snapshot aktif, menerapkan patch, lalu membuat snapshot immutable baru secara atomik. Perubahan di atas 25% menjadi warning yang wajib dikonfirmasi.
 
-Canonical name skin produksi dikurasi dalam manifest `database/data/skin-catalog-v1.php`. Command manual `php artisan catalog:import-skins` memasukkan manifest secara atomik dan idempotent, mencocokkan canonical name atau alias aktif, menolak mapping ambigu/inaktif, serta mencatat satu audit ketika item baru dibuat. Command ini tidak melakukan fetch eksternal dan tidak dijadwalkan; `ValueSource` tetap dilarang membuat catalog item otomatis.
+Kolom CSV adalah `item_key`, `category`, `name`, `aliases`, `value`, `offer_range`, dan `status`. Server membuat `item_key` untuk item baru; template ekspor berikutnya menyertakan key tersebut. Rod dan thumbnail tidak berasal dari CSV. Thumbnail menerima JPG/PNG/WebP maksimal 2 MB dan menggunakan asset default kategori ketika belum tersedia.
 
 Point value mempertahankan presisi sumber sampai dua angka desimal; nilai seperti `7.5` tidak boleh dibulatkan saat staging, snapshot, listing, atau perhitungan W/F/L.
 
@@ -101,4 +108,4 @@ Callback provider harus diverifikasi signature-nya dan diproses idempotent. Peng
 - Sistem memfasilitasi pencarian, penilaian, kesepakatan, dan pertemuan; sistem tidak memegang item Roblox.
 - Inventory adalah self-declared pada fase awal.
 - Sistem tidak menjamin transaksi di dalam game benar-benar diselesaikan dan tidak mengklaim afiliasi resmi dengan Roblox atau Fisch.
-- Google Sheets tidak resmi adalah input yang dapat berubah. Snapshot terakhir yang valid tetap aktif bila sinkronisasi baru gagal.
+- CSV invalid atau belum dipublikasikan tidak mengubah snapshot aktif. Snapshot terakhir yang valid tetap digunakan sampai admin menyetujui kandidat baru.

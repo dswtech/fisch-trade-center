@@ -7,6 +7,9 @@ use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\ListingController;
 use App\Http\Controllers\SearchController;
 use App\Http\Controllers\AdminController;
+use App\Http\Controllers\CatalogThumbnailController;
+use App\Http\Controllers\CatalogValueImportController;
+use App\Http\Controllers\RodAdminController;
 use App\Http\Controllers\PhaseOnePageController;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Foundation\Auth\EmailVerificationRequest;
@@ -52,9 +55,13 @@ Route::middleware('auth')->group(function (): void {
         Route::middleware('admin')->prefix('admin')->name('admin.')->group(function (): void {
             Route::get('/', [AdminController::class, 'index'])->name('index');
             Route::patch('/settings/fair-threshold', [AdminController::class, 'threshold'])->name('threshold');
-            Route::post('/value-imports/fixture', [AdminController::class, 'importFixture'])->name('imports.fixture');
-            Route::post('/value-imports/production', [AdminController::class, 'importProduction'])->name('imports.production');
-            Route::post('/value-snapshots/publish', [AdminController::class, 'publish'])->name('snapshots.publish');
+            Route::get('/catalog-value-imports/template', [CatalogValueImportController::class, 'template'])->name('catalog-imports.template');
+            Route::post('/catalog-value-imports', [CatalogValueImportController::class, 'store'])->name('catalog-imports.store');
+            Route::post('/catalog-value-imports/{import}/publish', [CatalogValueImportController::class, 'publish'])->name('catalog-imports.publish');
+            Route::post('/rods', [RodAdminController::class, 'store'])->name('rods.store');
+            Route::patch('/catalog-items/{item}/rod', [RodAdminController::class, 'assign'])->name('catalog-items.rod');
+            Route::post('/catalog-items/{item}/thumbnail', [CatalogThumbnailController::class, 'update'])->name('catalog-items.thumbnail');
+            Route::delete('/catalog-items/{item}/thumbnail', [CatalogThumbnailController::class, 'destroy'])->name('catalog-items.thumbnail.destroy');
         });
     });
 });

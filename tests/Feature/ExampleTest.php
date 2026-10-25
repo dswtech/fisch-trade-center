@@ -68,16 +68,6 @@ final class ExampleTest extends TestCase
         self::assertDatabaseHas('audit_events',['event_type'=>'setting.fair_threshold.changed']);
     }
 
-    public function test_admin_fixture_publish_is_immutable_and_idempotent(): void
-    {
-        $admin=User::create(['name'=>'Admin','email'=>'publisher@example.test','password'=>'password123','role'=>'admin']); $admin->forceFill(['email_verified_at'=>now()])->save();
-        foreach([['skin','Skins','Abyssal Current'],['boat','Boats','Tidebreaker'],['fishing_rod','Fishing Rods','Aurora Rod']] as [$key,$category,$name]){$categoryId=DB::table('catalog_categories')->insertGetId(['public_id'=>(string)Str::uuid(),'key'=>$key,'name'=>$category,'is_active'=>true,'created_at'=>now(),'updated_at'=>now()]);CatalogItem::create(['category_id'=>$categoryId,'canonical_name'=>$name,'is_active'=>true]);}
-        $this->actingAs($admin)->post('/admin/value-imports/fixture')->assertSessionHasNoErrors(); $import=DB::table('value_imports')->first();
-        $this->actingAs($admin)->post('/admin/value-snapshots/publish',['importId'=>$import->public_id])->assertSessionHasNoErrors();
-        $this->actingAs($admin)->post('/admin/value-snapshots/publish',['importId'=>$import->public_id])->assertSessionHasNoErrors();
-        self::assertDatabaseCount('value_snapshots',1); self::assertDatabaseCount('catalog_item_values',3); self::assertDatabaseHas('audit_events',['event_type'=>'value_snapshot.published']);
-    }
-
     public function test_idempotency_key_replays_listing_and_setting_mutations_once(): void
     {
         [$user,$item]=$this->playerAndItem('retry@example.test');
@@ -109,9 +99,10 @@ final class ExampleTest extends TestCase
         $owner=User::create(['name'=>'Private Owner','email'=>'private-owner@example.test','password'=>'password123']);$owner->forceFill(['email_verified_at'=>now()])->save();
         DB::table('player_profiles')->insert(['user_id'=>$owner->id,'usn'=>'OwnerSecretUSN','ign'=>'OwnerSecretIGN','created_at'=>now(),'updated_at'=>now()]);
         $viewer=User::create(['name'=>'Viewer','email'=>'viewer@example.test','password'=>'password123']);$viewer->forceFill(['email_verified_at'=>now()])->save();
-        $categoryId=DB::table('catalog_categories')->insertGetId(['public_id'=>$categoryPublicId=(string)Str::uuid(),'key'=>'skin','name'=>'Skins','is_active'=>true,'created_at'=>now(),'updated_at'=>now()]);
+        $categoryId=DB::table('catalog_categories')->insertGetId(['public_id'=>$categoryPublicId=(string)Str::uuid(),'key'=>'rod_skin','name'=>'Rod Skin','is_active'=>true,'created_at'=>now(),'updated_at'=>now()]);
+        $boatCategoryId=DB::table('catalog_categories')->insertGetId(['public_id'=>(string)Str::uuid(),'key'=>'boat','name'=>'Boats','is_active'=>true,'created_at'=>now(),'updated_at'=>now()]);
         $offered=CatalogItem::create(['category_id'=>$categoryId,'canonical_name'=>'Abyssal Current','is_active'=>true]);
-        $wanted=CatalogItem::create(['category_id'=>$categoryId,'canonical_name'=>'Aurora Rod','is_active'=>true]);
+        $wanted=CatalogItem::create(['category_id'=>$boatCategoryId,'canonical_name'=>'Tidebreaker','is_active'=>true]);
         $importId=DB::table('value_imports')->insertGetId(['public_id'=>(string)Str::uuid(),'source_key'=>'test','status'=>'valid','checksum'=>str_repeat('a',64),'source_timestamp'=>now(),'validation_errors'=>'[]','payload'=>'[]','imported_at'=>now(),'created_at'=>now(),'updated_at'=>now()]);
         $snapshotId=DB::table('value_snapshots')->insertGetId(['public_id'=>(string)Str::uuid(),'value_import_id'=>$importId,'version'=>'test-v1','checksum'=>str_repeat('b',64),'source_timestamp'=>now(),'published_at'=>now(),'published_by'=>$owner->id,'created_at'=>now(),'updated_at'=>now()]);
         DB::table('catalog_item_values')->insert([['snapshot_id'=>$snapshotId,'catalog_item_id'=>$offered->id,'unit_value'=>2400],['snapshot_id'=>$snapshotId,'catalog_item_id'=>$wanted->id,'unit_value'=>3200]]);
@@ -120,7 +111,7 @@ final class ExampleTest extends TestCase
 
         $query=http_build_query(['offeredItem'=>$offered->public_id,'wantedItem'=>$wanted->public_id,'category'=>$categoryPublicId,'minValue'=>2400,'maxValue'=>2400,'freshness'=>'hour']);
         $response=$this->actingAs($viewer)->get('/search?'.$query);
-        $response->assertOk()->assertDontSee('private-owner@example.test')->assertDontSee('Private Owner')->assertDontSee('OwnerSecretUSN')->assertDontSee('OwnerSecretIGN')->assertInertia(fn(Assert $page)=>$page->component('discovery')->has('listings',1)->where('listings.0.offered','Abyssal Current')->where('listings.0.wanted','Aurora Rod')->where('listings.0.value',2400));
+        $response->assertOk()->assertDontSee('private-owner@example.test')->assertDontSee('Private Owner')->assertDontSee('OwnerSecretUSN')->assertDontSee('OwnerSecretIGN')->assertInertia(fn(Assert $page)=>$page->component('discovery')->has('listings',1)->where('listings.0.offered','Abyssal Current')->where('listings.0.wanted','Tidebreaker')->where('listings.0.value',2400));
         $this->actingAs($viewer)->get('/search?'.http_build_query(['maxValue'=>2399]))->assertInertia(fn(Assert $page)=>$page->has('listings',0));
         $this->actingAs($owner)->get('/search?'.$query)->assertInertia(fn(Assert $page)=>$page->has('listings',0));
     }
@@ -147,7 +138,8 @@ final class ExampleTest extends TestCase
     private function playerAndItem(string $email): array
     {
         $user=User::create(['name'=>'Player','email'=>$email,'password'=>'password123']); $user->forceFill(['email_verified_at'=>now()])->save();
-        $categoryId=DB::table('catalog_categories')->insertGetId(['public_id'=>(string)Str::uuid(),'key'=>'skin-'.Str::random(5),'name'=>'Skins','is_active'=>true,'created_at'=>now(),'updated_at'=>now()]);
+        DB::table('player_profiles')->insert(['user_id'=>$user->id,'usn'=>'TestUSN','ign'=>'TestIGN','created_at'=>now(),'updated_at'=>now()]);
+        $categoryId=DB::table('catalog_categories')->insertGetId(['public_id'=>(string)Str::uuid(),'key'=>'rod_skin','name'=>'Rod Skin','is_active'=>true,'created_at'=>now(),'updated_at'=>now()]);
         return [$user,CatalogItem::create(['category_id'=>$categoryId,'canonical_name'=>'Abyssal Current','is_active'=>true])];
     }
 }

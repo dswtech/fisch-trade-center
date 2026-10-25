@@ -1,6 +1,7 @@
 <?php
 namespace App\Http\Controllers;
 
+use App\Domain\Catalog\CatalogItemImage;
 use App\Domain\Trade\WflCalculator;
 use App\Models\Listing;
 use Illuminate\Http\Request;
@@ -26,7 +27,7 @@ class PhaseOnePageController extends Controller
 
     public function listings(Request $request): Response
     {
-        $rows = Listing::where('user_id', $request->user()->id)->with(['latestVersion.items.catalogItem'])->orderByDesc('id')->get()
+        $rows = Listing::where('user_id', $request->user()->id)->with(['latestVersion.items.catalogItem.category'])->orderByDesc('id')->get()
             ->map(fn (Listing $listing): array => [
                 'id' => $listing->public_id,
                 'status' => $listing->status,
@@ -34,6 +35,8 @@ class PhaseOnePageController extends Controller
                 'expiresAt' => $listing->expires_at?->toIso8601String(),
                 'offered' => $this->sideNames($listing, 'offered'),
                 'wanted' => $this->sideNames($listing, 'wanted'),
+                'offeredThumbnailUrl' => $this->sideThumbnail($listing, 'offered'),
+                'wantedThumbnailUrl' => $this->sideThumbnail($listing, 'wanted'),
             ]);
 
         return Inertia::render('workspace', ['section' => 'listings', 'listings' => $rows]);
@@ -46,7 +49,7 @@ class PhaseOnePageController extends Controller
 
     public function listingEdit(Request $request, string $listing): Response
     {
-        $owned = Listing::where('public_id', $listing)->where('user_id', $request->user()->id)->with(['latestVersion.items.catalogItem'])->firstOrFail();
+        $owned = Listing::where('public_id', $listing)->where('user_id', $request->user()->id)->with(['latestVersion.items.catalogItem.category'])->firstOrFail();
         abort_unless($owned->status === 'active' && ($owned->expires_at === null || $owned->expires_at->isFuture()), 409, 'Only an active, unexpired listing can be edited.');
 
         return Inertia::render('workspace', [
@@ -98,16 +101,29 @@ class PhaseOnePageController extends Controller
         $snapshotId = DB::table('value_snapshots')->whereNotNull('published_at')->orderByDesc('published_at')->orderByDesc('id')->value('id');
 
         return DB::table('catalog_items')->join('catalog_categories', 'catalog_categories.id', '=', 'catalog_items.category_id')
+            ->leftJoin('rods', 'rods.id', '=', 'catalog_items.rod_id')
             ->leftJoin('catalog_item_values', fn ($join) => $join->on('catalog_item_values.catalog_item_id', '=', 'catalog_items.id')->where('catalog_item_values.snapshot_id', $snapshotId ?? 0))
-            ->where('catalog_items.is_active', true)->where('catalog_categories.is_active', true)->orderBy('canonical_name')
-            ->get(['catalog_items.public_id as id', 'canonical_name as name', 'catalog_categories.name as category', 'catalog_item_values.unit_value as value', 'catalog_item_values.offer_range as offerRange']);
+            ->where('catalog_items.is_active', true)->where('catalog_categories.is_active', true)
+            ->whereIn('catalog_categories.key', array_keys((array) config('catalog.categories')))->orderBy('canonical_name')
+            ->get(['catalog_items.public_id as id', 'canonical_name as name', 'catalog_categories.name as category', 'catalog_categories.key as categoryKey', 'catalog_items.thumbnail_path as thumbnailPath', 'rods.name as rodName', 'catalog_item_values.unit_value as value', 'catalog_item_values.offer_range as offerRange'])
+            ->map(fn ($item): array => [
+                'id' => $item->id, 'name' => $item->name, 'category' => $item->category,
+                'rodName' => $item->rodName ?? ($item->categoryKey === 'rod_skin' ? 'Undefined Rod' : null),
+                'thumbnailUrl' => CatalogItemImage::url($item->thumbnailPath, $item->categoryKey),
+                'value' => $item->value === null ? null : (float) $item->value, 'offerRange' => $item->offerRange,
+            ]);
     }
 
     private function inventoryEntries(Request $request)
     {
         return DB::table('inventory_entries')->join('catalog_items', 'catalog_items.id', '=', 'inventory_entries.catalog_item_id')
+            ->join('catalog_categories', 'catalog_categories.id', '=', 'catalog_items.category_id')
             ->where('user_id', $request->user()->id)->whereNull('archived_at')->orderBy('canonical_name')
-            ->get(['inventory_entries.public_id as id', 'catalog_items.public_id as catalogItemId', 'canonical_name as name', 'quantity']);
+            ->get(['inventory_entries.public_id as id', 'catalog_items.public_id as catalogItemId', 'canonical_name as name', 'quantity', 'catalog_items.thumbnail_path as thumbnailPath', 'catalog_categories.key as categoryKey'])
+            ->map(fn ($entry): array => [
+                'id' => $entry->id, 'catalogItemId' => $entry->catalogItemId, 'name' => $entry->name,
+                'quantity' => $entry->quantity, 'thumbnailUrl' => CatalogItemImage::url($entry->thumbnailPath, $entry->categoryKey),
+            ]);
     }
 
     /** @param list<array{catalogItemId: string, quantity: int}> $rows */
@@ -125,5 +141,12 @@ class PhaseOnePageController extends Controller
     private function sideNames(Listing $listing, string $side): string
     {
         return $listing->latestVersion?->items->where('side', $side)->map(fn ($item): string => $item->catalogItem->canonical_name.($item->quantity > 1 ? ' ×'.$item->quantity : ''))->join(' + ') ?: '—';
+    }
+
+    private function sideThumbnail(Listing $listing, string $side): string
+    {
+        $item = $listing->latestVersion?->items->firstWhere('side', $side)?->catalogItem;
+
+        return CatalogItemImage::url($item?->thumbnail_path, $item?->category?->key ?? 'other');
     }
 }

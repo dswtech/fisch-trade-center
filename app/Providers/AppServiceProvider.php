@@ -2,9 +2,6 @@
 
 namespace App\Providers;
 
-use App\Domain\Value\DisabledProductionValueSource;
-use App\Domain\Value\GoogleSheetsValueSource;
-use App\Domain\Value\ValueSource;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -14,9 +11,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        $this->app->singleton(ValueSource::class, fn (): ValueSource => config('value_source.enabled')
-            ? new GoogleSheetsValueSource
-            : new DisabledProductionValueSource);
+        //
     }
 
     /**

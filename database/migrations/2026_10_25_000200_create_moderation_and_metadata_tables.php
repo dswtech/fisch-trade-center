@@ -15,19 +15,6 @@ return new class extends Migration
             $table->json('after_state')->nullable()->after('before_state');
         });
 
-        Schema::create('catalog_metadata_imports', function (Blueprint $table): void {
-            $table->id();
-            $table->uuid('public_id')->unique();
-            $table->string('source_key');
-            $table->string('status', 20)->index();
-            $table->string('checksum', 64)->nullable()->index();
-            $table->timestampTz('source_timestamp')->nullable();
-            $table->json('validation_errors')->nullable();
-            $table->json('payload')->nullable();
-            $table->timestampTz('imported_at');
-            $table->timestamps();
-        });
-
         Schema::create('reports', function (Blueprint $table): void {
             $table->id();
             $table->uuid('public_id')->unique();
@@ -63,7 +50,6 @@ return new class extends Migration
     {
         Schema::dropIfExists('suspensions');
         Schema::dropIfExists('reports');
-        Schema::dropIfExists('catalog_metadata_imports');
         Schema::table('audit_events', function (Blueprint $table): void {
             $table->dropIndex(['correlation_id']);
             $table->dropColumn(['correlation_id', 'reason_code', 'before_state', 'after_state']);

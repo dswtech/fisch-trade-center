@@ -47,7 +47,7 @@ class SearchController extends Controller
             ->when(($filters['freshness'] ?? null) === 'hour', fn ($query) => $query->where('published_at', '>=', now()->subHour()))
             ->when(($filters['freshness'] ?? null) === 'day', fn ($query) => $query->where('published_at', '>=', now()->subDay()))
             ->when(($filters['freshness'] ?? null) === 'week', fn ($query) => $query->where('published_at', '>=', now()->subWeek()))
-            ->with(['latestVersion.items.catalogItem']);
+            ->with(['latestVersion.items.catalogItem.category']);
 
         $page = $query->cursorPaginate(24)->withQueryString();
         $listings = collect($page->items())->map($presenter->listing(...));
@@ -58,20 +58,20 @@ class SearchController extends Controller
             'filters' => collect($filters)->except('cursor'),
             'snapshot' => $presenter->activeSnapshot(),
             'filterOptions' => [
-                'items' => DB::table('catalog_items')->where('is_active', true)->orderBy('canonical_name')->get(['public_id as id', 'canonical_name as name']),
-                'categories' => DB::table('catalog_categories')->where('is_active', true)->orderBy('name')->get(['public_id as id', 'name']),
+                'items' => DB::table('catalog_items')->join('catalog_categories', 'catalog_categories.id', '=', 'catalog_items.category_id')->where('catalog_items.is_active', true)->where('catalog_categories.is_active', true)->whereIn('catalog_categories.key', array_keys((array) config('catalog.categories')))->orderBy('canonical_name')->get(['catalog_items.public_id as id', 'canonical_name as name']),
+                'categories' => DB::table('catalog_categories')->where('is_active', true)->whereIn('key', array_keys((array) config('catalog.categories')))->orderBy('name')->get(['public_id as id', 'name']),
             ],
         ]);
     }
 
     private function catalogItemId(?string $publicId): ?int
     {
-        return $publicId ? DB::table('catalog_items')->where('public_id', $publicId)->where('is_active', true)->value('id') : null;
+        return $publicId ? DB::table('catalog_items')->join('catalog_categories', 'catalog_categories.id', '=', 'catalog_items.category_id')->where('catalog_items.public_id', $publicId)->where('catalog_items.is_active', true)->where('catalog_categories.is_active', true)->whereIn('catalog_categories.key', array_keys((array) config('catalog.categories')))->value('catalog_items.id') : null;
     }
 
     private function categoryId(?string $publicId): ?int
     {
-        return $publicId ? DB::table('catalog_categories')->where('public_id', $publicId)->where('is_active', true)->value('id') : null;
+        return $publicId ? DB::table('catalog_categories')->where('public_id', $publicId)->where('is_active', true)->whereIn('key', array_keys((array) config('catalog.categories')))->value('id') : null;
     }
 
     /** @return list<int> */
@@ -83,7 +83,7 @@ class SearchController extends Controller
 
         $needle = Str::of($query)->lower()->ascii()->squish()->toString();
 
-        return DB::table('catalog_items')->where('is_active', true)->get(['id', 'canonical_name', 'aliases'])
+        return DB::table('catalog_items')->join('catalog_categories', 'catalog_categories.id', '=', 'catalog_items.category_id')->where('catalog_items.is_active', true)->where('catalog_categories.is_active', true)->whereIn('catalog_categories.key', array_keys((array) config('catalog.categories')))->get(['catalog_items.id', 'canonical_name', 'aliases'])
             ->filter(function ($item) use ($needle): bool {
                 foreach ([$item->canonical_name, ...((array) json_decode($item->aliases ?? '[]', true))] as $candidate) {
                     $normalized = Str::of((string) $candidate)->lower()->ascii()->squish()->toString();

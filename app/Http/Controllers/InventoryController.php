@@ -13,7 +13,7 @@ class InventoryController extends Controller
     public function store(Request $request):RedirectResponse
     {
         $data=$request->validate(['catalogItemId'=>['required','uuid'],'quantity'=>['required','integer','min:1','max:999']]);
-        $item=CatalogItem::where('public_id',$data['catalogItemId'])->where('is_active',true)->firstOrFail();
+        $item=CatalogItem::where('public_id',$data['catalogItemId'])->where('is_active',true)->whereHas('category',fn($query)=>$query->where('is_active',true)->whereIn('key',array_keys((array)config('catalog.categories'))))->firstOrFail();
         DB::transaction(function () use ($request, $item, $data): void {
             $entry=InventoryEntry::firstOrNew(['user_id'=>$request->user()->id,'catalog_item_id'=>$item->id]);
             $entry->fill(['quantity'=>$data['quantity'],'archived_at'=>null])->save();

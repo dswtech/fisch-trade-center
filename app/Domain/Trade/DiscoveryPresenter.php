@@ -2,6 +2,7 @@
 
 namespace App\Domain\Trade;
 
+use App\Domain\Catalog\CatalogItemImage;
 use App\Models\Listing;
 use Illuminate\Support\Facades\DB;
 
@@ -34,6 +35,8 @@ final class DiscoveryPresenter
             'alias' => 'Angler '.str_pad((string) (crc32($listing->public_id) % 100), 2, '0', STR_PAD_LEFT),
             'offered' => $names('offered'),
             'wanted' => $names('wanted'),
+            'offeredThumbnailUrl' => $this->thumbnailUrl($items->firstWhere('side', 'offered')?->catalogItem),
+            'wantedThumbnailUrl' => $this->thumbnailUrl($items->firstWhere('side', 'wanted')?->catalogItem),
             'value' => $version?->offered_value,
             'wantedValue' => $version?->wanted_value,
             'age' => $listing->published_at?->diffForHumans(short: true),
@@ -41,6 +44,11 @@ final class DiscoveryPresenter
             'snapshotVersion' => $snapshotVersion,
             'wfl' => $wfl->toArray(),
         ];
+    }
+
+    private function thumbnailUrl(mixed $item): string
+    {
+        return CatalogItemImage::url($item?->thumbnail_path, $item?->category?->key ?? 'other');
     }
 
     /** @return array{version: string, ageLabel: string, sourceTimestamp: ?string}|null */

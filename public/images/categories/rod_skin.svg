@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 320" role="img" aria-label="Rod Skin default thumbnail">
+  <defs><linearGradient id="a" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#0b174d"/><stop offset="1" stop-color="#26d9ff"/></linearGradient></defs>
+  <rect width="320" height="320" rx="44" fill="#080c27"/><circle cx="160" cy="160" r="112" fill="url(#a)" opacity=".5"/>
+  <path d="M82 233 224 86c12-12 31 6 19 19L98 248c-12 11-28-4-16-15Z" fill="#f0d000"/><path d="m200 111 29 29" stroke="#f6f8ff" stroke-width="12" stroke-linecap="round"/>
+</svg>
