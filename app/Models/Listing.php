@@ -60,7 +60,20 @@ class Listing extends Model
         });
     }
 
-    public function scopeWithCurrentOfferedValue(Builder $query, ?int $minimum, ?int $maximum): Builder
+    /** @param list<int> $catalogItemIds */
+    public function scopeWithCurrentItems(Builder $query, array $catalogItemIds): Builder
+    {
+        return $query->whereExists(function ($items) use ($catalogItemIds): void {
+            $items->selectRaw('1')
+                ->from('listing_versions')
+                ->join('listing_version_items', 'listing_version_items.listing_version_id', '=', 'listing_versions.id')
+                ->whereColumn('listing_versions.listing_id', 'listings.id')
+                ->whereColumn('listing_versions.version', 'listings.current_version')
+                ->whereIn('listing_version_items.catalog_item_id', $catalogItemIds);
+        });
+    }
+
+    public function scopeWithCurrentOfferedValue(Builder $query, int|float|null $minimum, int|float|null $maximum): Builder
     {
         return $query->whereExists(function ($versions) use ($minimum, $maximum): void {
             $versions->selectRaw('1')

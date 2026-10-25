@@ -20,6 +20,17 @@ final class CuratedSkinCatalogImporter
         }
 
         return DB::transaction(function () use ($manifest, $names): array {
+            foreach ([
+                'skin' => 'Skins',
+                'boat' => 'Boats',
+                'fishing_rod' => 'Fishing Rods',
+            ] as $key => $name) {
+                DB::table('catalog_categories')->updateOrInsert(
+                    ['key' => $key],
+                    ['public_id' => DB::table('catalog_categories')->where('key', $key)->value('public_id') ?? (string) Str::uuid(), 'name' => $name, 'is_active' => true, 'updated_at' => now(), 'created_at' => DB::table('catalog_categories')->where('key', $key)->value('created_at') ?? now()],
+                );
+            }
+
             $category = DB::table('catalog_categories')->where('key', 'skin')->first();
             if ($category && ! $category->is_active) {
                 throw new DomainException('Skin catalog category is inactive.');

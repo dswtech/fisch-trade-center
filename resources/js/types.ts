@@ -2,3 +2,8 @@ export type Locale='id'|'en'; export type Theme='dark'|'light'; export type WflS
 export interface SharedProps extends Record<string,unknown>{auth:{user:null|{id:string;name:string;emailVerified:boolean;role:string}};preferences:{locale:Locale|null;theme:Theme|null};flash:{success?:string;error?:string};errors:Record<string,string>}
 export interface WflResult{giveTotal:number|null;receiveTotal:number|null;delta:number|null;deltaPercent:number|null;snapshotVersion:string|null;perspective:string;status:WflStatus;reasons:Array<{code:string;item_id?:string}>}
 export interface ListingSummary{id:string;alias:string;offered:string;wanted:string;value:number|null;age:string;status:WflStatus}
+export interface TradeItem{id:string;name:string;quantity:number;unitValue?:number|null;inventoryEntryId?:string;side?:'mine'|'theirs'|'offered'|'wanted'}
+export interface Recommendation{id:string;items:TradeItem[];giveTotal:number|null;receiveTotal:number|null;deltaPercent:number|null;status:WflStatus;reasons?:Array<{code:string;itemId?:string}>}
+export interface ProposalSummary{id:string;version:number;status:string;snapshotVersion:string;giveTotal:number|null;receiveTotal:number|null;deltaPercent:number|null;perspectiveStatus:WflStatus;expiresAt:string;items:TradeItem[];canAccept?:boolean}
+export interface NegotiationSummary{id:string;alias:string;status:string;expiresAt:string;updatedAt?:string;activeProposal?:ProposalSummary|null}
+export interface DealSummary{id:string;status:string;serverType:'public_server'|'private_server';snapshotVersion:string;expiresAt:string;revealExpiresAt?:string|null;feeQuote:number;disclaimerAccepted?:boolean;identity?:{usn:string;ign:string}|null}

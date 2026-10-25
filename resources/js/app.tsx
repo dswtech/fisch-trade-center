@@ -9,7 +9,6 @@ createInertiaApp({
   setup({el,App,props}){
     createRoot(el).render(<><NetworkStatus/><App {...props}/></>);
     requestAnimationFrame(()=>{
-      el.querySelector('.brand')?.setAttribute('aria-label','Fisch Trade Center home');
       el.querySelector('.avatar')?.setAttribute('aria-label','Player profile');
       const grid=el.querySelector('.listing-grid');
       grid?.setAttribute('aria-label','Latest trade listings');

@@ -42,6 +42,7 @@ Keputusan terbuka di atas menahan implementasi bagian terkait, bukan penulisan f
 
 ## Progres terakhir
 
+- Checkpoint WIP sebelum redesign katalog/import diverifikasi pada 25 Oktober 2026: Vitest lulus 8/8 dan TypeScript strict typecheck lulus; PHPUnit menjalankan 41 test dengan 1 error pada lookup listing setelah publish dan 1 failure berupa respons 422 pada replay mutation listing. Pengguna memilih menyimpan checkpoint tanpa memperbaiki dua regresi tersebut lebih dahulu.
 - PRD, knowledge, memory, manifest, enam ADR, root agent instruction, Claude pointer, dan enam rules telah dibuat sebagai paket awal.
 - Referensi PRD, panduan dokumentasi, serta struktur Value List Skins telah ditinjau pada 24 Oktober 2026.
 - Pemeriksaan dokumentasi awal memiliki 68 requirement; PRD v1.1 kini memiliki 69 requirement unik setelah penambahan ACC-06, dengan distribusi `M=53`, `S=12`, `C=3`, `W=1`.
@@ -49,11 +50,11 @@ Keputusan terbuka di atas menahan implementasi bagian terkait, bukan penulisan f
 - Seluruh tautan relatif valid dan tidak ada dokumen agen yatim terhadap manifest.
 - Core Fase 1 tersedia: authentication/verifikasi email, onboarding profil manual, shared Inertia props yang diredaksi, preferensi locale/theme, katalog, inventory CRUD, listing wizard/management berversi, cursor search, simulator W/F/L fail-closed, fixture ValueSource, konfigurasi/audit admin, dan dashboard responsif.
 - Comp final disetujui di `.impeccable/mocks/hybrid-02-search-first.png`; plate original dan prompt provenance tersedia. `DESIGN.md` dan `resources/design/tokens.json` menjadi sumber design system.
-- Verifikasi terakhir: PHPUnit 13.4.3 lulus 36 test/159 assertion; Vitest lulus 8/8; Playwright lulus 14/14 pada desktop dan mobile; TypeScript strict typecheck dan Vite 8.3.5 build lulus. Playwright memakai SQLite file disposable dan server lokal terisolasi.
+- Verifikasi terakhir: PHPUnit 13.4.3 lulus 36 test/159 assertion; Vitest lulus 8/8; Playwright lulus 16/16 pada desktop dan mobile; TypeScript strict typecheck dan Vite 8.3.5 build lulus. Playwright memakai SQLite file disposable dan server lokal terisolasi.
 - Harness E2E memakai SQLite file disposable, fixture testing-only, dan menguji login verified user, profil privat, inventory, listing, penerapan filter offered/wanted sebagai guest, redaksi identitas, simulator, filter sheet, keyboard/focus, theme persistence, serta responsive overflow.
 - Search SRC-01 memakai item per versi yang ternormalisasi, filter offered/wanted item, kategori, offered value range, dan freshness; cursor diurutkan deterministik berdasarkan `published_at` lalu `id`. Setiap versi menyimpan snapshot serta total value-nya sendiri, sedangkan payload JSON immutable tetap dipertahankan.
 - Benchmark PostgreSQL 16.4 disposable pada 100.000 listing dan 200.000 item lulus untuk seluruh matrix SRC-01. p95: baseline 18,64 ms; offered 82,55 ms; wanted 83,16 ms; kategori 97,86 ms; value range 50,83 ms; freshness 19,43 ms; gabungan 349,10 ms. Target p95 <=1 detik terpenuhi; cluster dan log terhapus setelah run.
-- Visual QA 1440/768/375 tidak menemukan horizontal overflow. Detector Impeccable menemukan satu font generik dan sudah dikoreksi. Axe menemukan nama tautan/region scroll dan source sudah dikoreksi; pemeriksaan ulang belum dijalankan agar batas dua putaran QA tetap dipatuhi.
+- Visual QA 1440/768/375 tidak menemukan horizontal overflow. Detector Impeccable tidak menemukan pelanggaran pada pemeriksaan terakhir. Axe menjadi regression test WCAG A/AA untuk halaman publik, login, search, profile, dan admin; pemeriksaan ulang desktop/mobile lulus tanpa violation.
 - Fondasi dokumentasi disiapkan sebagai initial commit untuk branch `main`.
 - Workflow CI Windows menjalankan PHPUnit, Vitest, build Vite, dan Playwright dari lockfile. Run pertama menemukan `ext-fileinfo` belum tersedia; run kedua melewati setup PHP tetapi menemukan direktori runtime Laravel hilang pada fresh checkout. Repository sekarang melacak placeholder `.gitignore` untuk `bootstrap/cache` dan direktori runtime `storage`, sedangkan workflow memprovisikan `fileinfo`, `mbstring`, dan `pdo_sqlite` secara eksplisit. Run ketiga pada commit `38ca2fc` lulus. Discovery menampilkan state loading/error/empty yang dapat diumumkan screen reader, memvalidasi value range sebelum request, dan menyediakan recovery untuk error server.
 - Fixture E2E testing-only memiliki 26 listing synthetic agar kombinasi seluruh filter SRC-01 dan kelanjutan cursor dapat diuji dari UI tanpa jaringan atau database persisten.
@@ -74,14 +75,18 @@ Keputusan terbuka di atas menahan implementasi bagian terkait, bukan penulisan f
 - Pada koneksi aplikasi efektif `127.0.0.1:5432/dsw_fisch_tc`, manifest katalog kini tercatat idempotent: 231 item cocok, 0 dibuat pada replay, dan satu audit `catalog.skin_manifest.imported` tersedia. Terdapat 232 skin aktif termasuk fixture lama; sumber live tetap menghasilkan 231 mapped, 0 unmapped, dan 0 ambiguous.
 - Anomaly baseline dibatasi pada snapshot published dengan `source_key` yang sama. Karena itu import pertama `google-sheets-skins` tidak dibandingkan dengan fixture, sedangkan import produksi berikutnya tetap melewati anomaly gate 25%.
 - Fetch produksi satu kali berhasil membuat staging valid `a408085e-0a85-4a68-a477-462afffa9b1e`. Publish manual melalui panel admin `http://ftc.test/admin` menghasilkan snapshot ID 2 dengan 231 `catalog_item_values` dan tepat satu audit `value_snapshot.published`; snapshot tersebut menjadi latest published tanpa mengubah snapshot fixture lama.
-- Akun preview synthetic dipromosikan menjadi admin dengan audit `user.role.changed` agar alur publish manual dapat diverifikasi. Provider tetap tampil `DISABLED` pada konfigurasi normal; fetch satu kali memakai process override dan tidak mengubah `.env`.
+- Akun preview synthetic dipromosikan menjadi admin dengan audit `user.role.changed` agar alur publish manual dapat diverifikasi. Provider kini aktif khusus environment lokal melalui `VALUE_SOURCE_ENABLED=true`; nilai konfigurasi lain dan secret tidak dibaca atau dicetak.
 - Generator idempotency key frontend sekarang memakai `crypto.getRandomValues` dengan format UUID v4, sehingga mutation tetap bekerja pada custom origin HTTP yang tidak menyediakan `crypto.randomUUID()`. Test memverifikasi format UUID dan rotasi key setelah respons definitif.
 - `PreviewAccountSeeder` menyediakan akun verified `sysadmin@ftc.test` dengan role `admin` dan `user@ftc.test` dengan role `player`. Seeder idempotent, menolak production atau database remote, telah dijalankan pada PostgreSQL lokal, dan login live `ftc.test` terverifikasi; sysadmin mendapat HTTP 200 pada `/admin`, sedangkan user mendapat HTTP 403.
+- `PreviewAccountSeeder` menetapkan `public_id` eksplisit saat record baru dibuat karena trait `WithoutModelEvents` menonaktifkan callback model yang biasanya membuat UUID tersebut.
+- Windows Scheduled Task `FischTradeCenterScheduler` aktif sebagai user Windows lokal, berjalan setiap satu menit dengan `D:\etc\php\8.4\php.exe artisan schedule:run` dari root repository. Eksekusi manual dan eksekusi terakhir terverifikasi berhasil dengan result code `0`; `schedule:list` menempatkan `values:import` pada pukul 02:00 Asia/Jakarta.
+- Import produksi kedua menghasilkan staging valid `bf8c5d0c-90db-4833-91ed-261d9a633964` berisi 231 baris. Kandidat dibandingkan dengan snapshot aktif `google-sheets-skins`, checksum tetap sama, tidak memiliki audit publish, dan snapshot aktif tetap ID 2.
+- Vite menggunakan `publicDir: false`, sehingga warning konflik `publicDir/outDir` hilang tanpa memindahkan asset. Build masih memberi peringatan toolchain karena shell aktif memakai Node 22.11.0 sementara Vite meminta sedikitnya 22.12.0, serta mempertahankan URL absolut asset laut untuk resolusi runtime; keduanya tidak menggagalkan build.
 
 ## Next step
 
-1. Set `VALUE_SOURCE_ENABLED=true` pada environment deployment dan aktifkan scheduler produksi; repository tidak mengubah `.env` atau konfigurasi scheduler host.
-2. Pantau import produksi kedua untuk membuktikan anomaly gate membandingkan terhadap snapshot `google-sheets-skins` yang baru dipublikasikan.
+1. Pantau hasil staging fetch harian lokal berikutnya pada pukul 02:00 Asia/Jakarta; publish tetap dilakukan manual oleh admin.
+2. Gunakan Node 22.23.4 yang tersedia di `.tools` saat ingin menghilangkan warning versi Node dari shell global.
 3. Setujui sumber value untuk Boats dan Fishing Rods sebelum mengisi value kedua kategori tersebut.
 
 ## Cara memperbarui memory

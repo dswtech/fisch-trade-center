@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use App\Models\User;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Str;
 use RuntimeException;
 
 final class PreviewAccountSeeder extends Seeder
@@ -22,10 +23,9 @@ final class PreviewAccountSeeder extends Seeder
             ['name' => 'FTC Sysadmin', 'email' => 'sysadmin@ftc.test', 'password' => 'Sysadmin123!', 'role' => 'admin'],
             ['name' => 'FTC User', 'email' => 'user@ftc.test', 'password' => 'User12345!', 'role' => 'player'],
         ] as $account) {
-            $user = User::updateOrCreate(
-                ['email' => $account['email']],
-                $account,
-            );
+            $user = User::firstOrNew(['email' => $account['email']]);
+            $user->fill($account);
+            $user->public_id ??= (string) Str::uuid();
             $user->forceFill(['email_verified_at' => now()])->save();
         }
     }

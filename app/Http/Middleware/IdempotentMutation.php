@@ -17,7 +17,11 @@ final class IdempotentMutation
         $key = (string) $request->header('X-Idempotency-Key');
         abort_unless((bool) preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i', $key), 422, 'Invalid idempotency key.');
 
-        $fingerprint = hash('sha256', $request->method().'|'.$request->path());
+        $fingerprint = hash('sha256', implode('|', [
+            $request->method(),
+            $request->path(),
+            hash('sha256', json_encode($this->canonicalize($request->except(['_token'])), JSON_THROW_ON_ERROR)),
+        ]));
         $records = $request->session()->get('idempotency_results', []);
         if (isset($records[$key])) {
             abort_unless(hash_equals($records[$key]['fingerprint'], $fingerprint), 409, 'Idempotency key was already used for another operation.');
@@ -39,5 +43,18 @@ final class IdempotentMutation
         }
 
         return $response;
+    }
+
+    private function canonicalize(mixed $value): mixed
+    {
+        if (! is_array($value)) {
+            return $value;
+        }
+
+        if (! array_is_list($value)) {
+            ksort($value);
+        }
+
+        return array_map($this->canonicalize(...), $value);
     }
 }
