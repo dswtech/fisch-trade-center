@@ -3,8 +3,8 @@
 | Item | Keterangan |
 |---|---|
 | Dokumen | PRD — Fisch Trade Center |
-| Versi | v1.1 (Disetujui untuk Fase 0–1) |
-| Tanggal | 24 Oktober 2026 |
+| Versi | v1.2 (Disetujui untuk Fase 0–1) |
+| Tanggal | 25 Oktober 2026 |
 | Disusun oleh | Product |
 | Audiens | Product Owner, Engineering, Design, QA, dan Operations |
 | Status | Disetujui untuk Fase 0–1; keputusan Fase 2–3 tetap terbuka |
@@ -82,6 +82,7 @@ Identitas Roblox juga perlu dilindungi selama penjajakan. Membukanya sejak listi
 | Available Balance | Saldo ledger yang dapat didebit; nilai turunan dari entry ledger, bukan angka bebas yang dapat diedit. |
 
 `Value`, `offer range`, dan `cost in Robux` tidak boleh disamakan. Point value dipakai untuk perhitungan deterministik; offer range hanya informasi komunitas; cost merupakan metadata perolehan dan bukan otomatis market value.
+Point value dapat berupa pecahan sampai dua angka desimal dan harus dipertahankan tanpa pembulatan sepanjang import, snapshot, listing, dan perhitungan W/F/L.
 
 ## 6. Alur Proses
 
@@ -350,7 +351,7 @@ Ukuran conversion belum diberi target numerik sebelum baseline karena angka tanp
 | 3 | ~~Berapa nilai awal `fair_threshold_percent` dan siapa yang menyetujui perubahannya?~~ | Tertutup 24 Oktober 2026: nilai awal ±10%; admin boleh mengubah secara prospektif dan setiap perubahan wajib diaudit. | REC-04 | Tinggi |
 | 4 | Berapa expiry listing, proposal, negotiation, pra-deal, dan identity reveal access? | Tertutup sebagian 24 Oktober 2026: listing Fase 1 = 14 hari; expiry Fase 2 tetap terbuka. | NEG-06, DEL-03 | Sedang |
 | 5 | Bagaimana report, no-show, scam allegation, suspend, dispute, refund, dan appeal ditangani? | Product Owner + Operations + Legal | ADM-04, ADM-05, production monetization | Tinggi |
-| 6 | Apakah penggunaan/sinkronisasi Value List dan metadata wiki telah memperoleh izin serta akses produksi yang stabil? | Product Owner + Legal | CAT-03 sampai CAT-06 dan SLA freshness | Tinggi |
+| 6 | ~~Apakah penggunaan/sinkronisasi Value List dan metadata wiki telah memperoleh izin serta akses produksi yang stabil?~~ | Tertutup sebagian 25 Oktober 2026: ekspor CSV publik `Value List Proto — Skins` disetujui untuk kategori `skin`; fetch dilakukan harian pukul 02.00 Asia/Jakarta ke staging, perubahan di atas 25% ditolak sebagai anomali, dan snapshot dipublikasikan manual oleh admin. Metadata wiki serta sumber value kategori lain tetap memerlukan persetujuan tersendiri. | CAT-03 sampai CAT-06 dan SLA freshness kategori selain `skin` | Tinggi |
 | 7 | Berapa retensi audit, proposal, identity snapshot, payment event, dan data akun setelah penghapusan akun? | Product Owner + Legal + Security | AUD-02, privacy policy, production launch | Tinggi |
 | 8 | Berapa target RPO/RTO dan strategi backup/restore produksi? | Engineering + Product Owner | Gerbang production Fase 1 | Sedang |
 

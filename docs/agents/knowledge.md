@@ -53,6 +53,12 @@ delta_percent = (delta / give_total) * 100
 - Sistem fail-closed: bila ambang Fair, value item, atau published snapshot tidak tersedia, tampilkan `Tidak dapat dinilai` dan jangan mengarang nilai.
 - Semua item dalam satu perhitungan harus berasal dari snapshot yang sama. Offer range ditampilkan terpisah dan tidak dicampur ke point value.
 
+Sumber produksi awal untuk value `skin` adalah ekspor CSV publik `Value List Proto — Skins`. Server mengambilnya setiap hari pukul 02.00 `Asia/Jakarta` ke staging. Import tidak dipublikasikan otomatis; admin hanya dapat memublikasikan import valid. Perubahan jumlah baris atau value item di atas 25% terhadap snapshot `skin` aktif dari `source_key` yang sama ditolak sebagai anomali. Import pertama suatu sumber tidak dibandingkan dengan snapshot fixture atau sumber lain. Nilai tepat 25% masih diterima. Boats dan Fishing Rods tetap tanpa value sampai sumbernya disetujui.
+
+Canonical name skin produksi dikurasi dalam manifest `database/data/skin-catalog-v1.php`. Command manual `php artisan catalog:import-skins` memasukkan manifest secara atomik dan idempotent, mencocokkan canonical name atau alias aktif, menolak mapping ambigu/inaktif, serta mencatat satu audit ketika item baru dibuat. Command ini tidak melakukan fetch eksternal dan tidak dijadwalkan; `ValueSource` tetap dilarang membuat catalog item otomatis.
+
+Point value mempertahankan presisi sumber sampai dua angka desimal; nilai seperti `7.5` tidak boleh dibulatkan saat staging, snapshot, listing, atau perhitungan W/F/L.
+
 ## Batas privasi
 
 Sebelum final deal selesai, pihak lawan hanya melihat alias anonim per transaksi, inventory/listing yang sengaja dimasukkan ke transaksi, dan status kesiapan. USN, IGN, email, user ID internal, histori lain, korelasi alias, serta detail pembayaran tidak boleh terlihat.

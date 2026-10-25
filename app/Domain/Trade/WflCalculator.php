@@ -5,8 +5,8 @@ namespace App\Domain\Trade;
 final class WflCalculator
 {
     /**
-     * @param list<array{id: string, quantity: int, unit_value: ?int}> $give
-     * @param list<array{id: string, quantity: int, unit_value: ?int}> $receive
+     * @param list<array{id: string, quantity: int, unit_value: int|float|null}> $give
+     * @param list<array{id: string, quantity: int, unit_value: int|float|null}> $receive
      */
     public function calculate(
         array $give,
@@ -34,10 +34,14 @@ final class WflCalculator
             return new WflResult(null, null, null, null, $snapshotVersion, $perspective, WflStatus::Unavailable, $reasons);
         }
 
-        $total = static fn (array $items): int => array_sum(array_map(
-            static fn (array $item): int => $item['quantity'] * $item['unit_value'],
-            $items,
-        ));
+        $total = static function (array $items): int|float {
+            $value = array_sum(array_map(
+                static fn (array $item): int|float => $item['quantity'] * $item['unit_value'],
+                $items,
+            ));
+
+            return floor((float) $value) === (float) $value ? (int) $value : $value;
+        };
         $giveTotal = $total($give);
         $receiveTotal = $total($receive);
 

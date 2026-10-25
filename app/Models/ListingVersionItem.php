@@ -11,6 +11,11 @@ class ListingVersionItem extends Model
 
     protected $guarded = [];
 
+    protected function casts(): array
+    {
+        return ['unit_value' => 'float'];
+    }
+
     public function catalogItem(): BelongsTo
     {
         return $this->belongsTo(CatalogItem::class);

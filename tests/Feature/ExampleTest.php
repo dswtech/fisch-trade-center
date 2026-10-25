@@ -22,7 +22,7 @@ final class ExampleTest extends TestCase
 
     public function test_public_dashboard_is_available_without_private_identity(): void
     {
-        $this->get('/')->assertOk()->assertDontSee('private@example.test')->assertDontSee('SecretIGN');
+        $this->get('/')->assertOk()->assertDontSee('private@example.test')->assertDontSee('SecretIGN')->assertSee('/build/assets/app.js?v=', false);
     }
 
     public function test_unverified_user_is_gated_from_private_phase_one_surfaces(): void
@@ -76,6 +76,32 @@ final class ExampleTest extends TestCase
         $this->actingAs($admin)->post('/admin/value-snapshots/publish',['importId'=>$import->public_id])->assertSessionHasNoErrors();
         $this->actingAs($admin)->post('/admin/value-snapshots/publish',['importId'=>$import->public_id])->assertSessionHasNoErrors();
         self::assertDatabaseCount('value_snapshots',1); self::assertDatabaseCount('catalog_item_values',3); self::assertDatabaseHas('audit_events',['event_type'=>'value_snapshot.published']);
+    }
+
+    public function test_idempotency_key_replays_listing_and_setting_mutations_once(): void
+    {
+        [$user,$item]=$this->playerAndItem('retry@example.test');
+        $entry=InventoryEntry::create(['user_id'=>$user->id,'catalog_item_id'=>$item->id,'quantity'=>2]);
+        $payload=['offered'=>[['inventoryEntryId'=>$entry->public_id,'quantity'=>1]],'wanted'=>[['catalogItemId'=>$item->public_id,'quantity'=>1]]];
+        $headers=['X-Idempotency-Key'=>'123e4567-e89b-42d3-a456-426614174000'];
+        $this->actingAs($user)->post('/listings',$payload,$headers)->assertRedirect();
+        $this->actingAs($user)->post('/listings',$payload,$headers)->assertRedirect();
+        self::assertDatabaseCount('listings',1);
+
+        $admin=User::create(['name'=>'Admin','email'=>'retry-admin@example.test','password'=>'password123','role'=>'admin']);
+        $admin->forceFill(['email_verified_at'=>now()])->save();
+        $settingHeaders=['X-Idempotency-Key'=>'223e4567-e89b-42d3-a456-426614174000'];
+        $this->actingAs($admin)->patch('/admin/settings/fair-threshold',['fairThresholdPercent'=>12],$settingHeaders)->assertRedirect();
+        $this->actingAs($admin)->patch('/admin/settings/fair-threshold',['fairThresholdPercent'=>12],$settingHeaders)->assertRedirect();
+        self::assertSame(1,DB::table('audit_events')->where('event_type','setting.fair_threshold.changed')->count());
+    }
+
+    public function test_idempotency_key_cannot_be_reused_for_another_route(): void
+    {
+        [$user,$item]=$this->playerAndItem('fingerprint@example.test');
+        $key=['X-Idempotency-Key'=>'323e4567-e89b-42d3-a456-426614174000'];
+        $this->actingAs($user)->post('/inventory',['catalogItemId'=>$item->public_id,'quantity'=>1],$key)->assertRedirect();
+        $this->actingAs($user)->patch('/profile',['usn'=>'PlayerUSN','ign'=>'PlayerIGN'],$key)->assertConflict();
     }
 
     public function test_search_filters_current_listing_version_and_redacts_owner_identity(): void

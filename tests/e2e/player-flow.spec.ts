@@ -49,3 +49,22 @@ test('simulator reports fair at the positive boundary',async({page})=>{
   await expect(page.getByText('Fair for viewer')).toBeVisible();
   await expect(page.getByText('10.0%')).toBeVisible();
 });
+
+test('failed profile mutation preserves private input and retries manually',async({page})=>{
+  await page.goto('/profile');
+  let attempts=0;
+  await page.route('**/profile',async route=>{
+    if(route.request().method()!=='PATCH')return route.continue();
+    attempts+=1;
+    if(attempts===1)await route.abort('failed'); else await route.continue();
+  });
+  await page.getByLabel(/Roblox username/).fill('RetryPrivateUSN');
+  await page.getByLabel(/In-game name/).fill('RetryPrivateIGN');
+  await page.getByRole('button',{name:/Save profile/}).click();
+  const recovery=page.locator('.mutation-recovery');
+  await expect(recovery).toContainText('input is preserved');
+  await expect(page.getByLabel(/Roblox username/)).toHaveValue('RetryPrivateUSN');
+  await recovery.getByRole('button',{name:'Try again'}).click();
+  await expect(page.getByLabel(/Roblox username/)).toHaveValue('RetryPrivateUSN');
+  expect(attempts).toBe(2);
+});

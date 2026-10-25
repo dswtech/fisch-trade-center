@@ -25,6 +25,8 @@ class DatabaseSeeder extends Seeder
             throw new RuntimeException('Synthetic fixtures may only be seeded in the testing environment.');
         }
 
+        $this->call(PreviewAccountSeeder::class);
+
         $user = User::create(['public_id' => (string) Str::uuid(), 'name' => 'E2E Angler', 'email' => 'e2e@example.test', 'password' => 'E2ePassword123!']);
         $user->forceFill(['email_verified_at' => now()])->save();
 

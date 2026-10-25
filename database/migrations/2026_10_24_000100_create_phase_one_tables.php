@@ -45,7 +45,7 @@ return new class extends Migration
         });
         Schema::create('catalog_item_values', function (Blueprint $table): void {
             $table->id(); $table->foreignId('snapshot_id')->constrained('value_snapshots')->cascadeOnDelete();
-            $table->foreignId('catalog_item_id')->constrained('catalog_items'); $table->unsignedBigInteger('unit_value');
+            $table->foreignId('catalog_item_id')->constrained('catalog_items'); $table->decimal('unit_value', 14, 2)->unsigned();
             $table->string('offer_range')->nullable(); $table->unique(['snapshot_id', 'catalog_item_id']);
         });
         Schema::create('inventory_entries', function (Blueprint $table): void {

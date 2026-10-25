@@ -37,11 +37,11 @@ Produk bukan sekadar papan listing: setiap hasil penilaian dan listing yang bern
 ## Capabilities and Constraints
 
 - Scope aktif: fondasi dan Fase 1—authentication, profile, catalog/value snapshot, inventory, listing, search, W/F/L, dan administrasi minimum terkait.
-- Di luar scope: negotiation, deal/reveal, wallet, payment, konektor Value List produksi, report/dispute penuh, dan admin finansial.
+- Di luar scope: negotiation, deal/reveal, wallet, payment, report/dispute penuh, dan admin finansial. Konektor Value List produksi untuk kategori `skin` termasuk dalam Fase 1.
 - Email wajib terverifikasi sebelum inventory, listing, atau simulator privat.
 - `fair_threshold_percent` awal adalah `10`; perubahan admin berlaku prospektif dan diaudit.
 - Listing aktif kedaluwarsa setelah 14 hari.
-- Value sync memakai provider contract dan fixture berversi. Provider produksi fail-closed sampai izin dan akses disetujui.
+- Value sync memakai provider contract dan fixture berversi. Provider produksi `skin` membaca ekspor CSV publik server-side, berjalan harian ke staging, menerapkan anomaly gate 25%, dan tetap fail-closed sampai diaktifkan melalui konfigurasi deployment.
 - Kategori awal adalah `skin`, `boat`, dan `fishing_rod`; model kategori tidak boleh menjadi enum tertutup.
 - Tidak ada migration, seed, scheduler, queue worker, atau import yang dijalankan terhadap database persisten oleh agent tanpa perintah eksplisit.
 

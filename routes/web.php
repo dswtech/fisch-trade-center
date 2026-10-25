@@ -53,6 +53,7 @@ Route::middleware('auth')->group(function (): void {
             Route::get('/', [AdminController::class, 'index'])->name('index');
             Route::patch('/settings/fair-threshold', [AdminController::class, 'threshold'])->name('threshold');
             Route::post('/value-imports/fixture', [AdminController::class, 'importFixture'])->name('imports.fixture');
+            Route::post('/value-imports/production', [AdminController::class, 'importProduction'])->name('imports.production');
             Route::post('/value-snapshots/publish', [AdminController::class, 'publish'])->name('snapshots.publish');
         });
     });

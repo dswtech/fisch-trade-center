@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class ListingVersion extends Model
 {
     protected $guarded=[];
-    protected function casts():array{return ['offered_items'=>'array','wanted_items'=>'array'];}
+    protected function casts():array{return ['offered_items'=>'array','wanted_items'=>'array','offered_value'=>'float','wanted_value'=>'float'];}
 
     public function items(): HasMany
     {

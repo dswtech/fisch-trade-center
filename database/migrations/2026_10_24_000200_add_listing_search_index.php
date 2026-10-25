@@ -14,8 +14,8 @@ return new class extends Migration
 
         Schema::table('listing_versions', function (Blueprint $table): void {
             $table->foreignId('value_snapshot_id')->nullable()->after('version')->constrained('value_snapshots');
-            $table->unsignedBigInteger('offered_value')->nullable()->after('wanted_items');
-            $table->unsignedBigInteger('wanted_value')->nullable()->after('offered_value');
+            $table->decimal('offered_value', 14, 2)->unsigned()->nullable()->after('wanted_items');
+            $table->decimal('wanted_value', 14, 2)->unsigned()->nullable()->after('offered_value');
             $table->index('offered_value');
         });
 
@@ -25,7 +25,7 @@ return new class extends Migration
             $table->foreignId('catalog_item_id')->constrained('catalog_items');
             $table->string('side', 10);
             $table->unsignedInteger('quantity');
-            $table->unsignedBigInteger('unit_value')->nullable();
+            $table->decimal('unit_value', 14, 2)->unsigned()->nullable();
             $table->index(['side', 'catalog_item_id', 'listing_version_id'], 'listing_items_side_catalog_version_idx');
             $table->index(['listing_version_id', 'side']);
         });

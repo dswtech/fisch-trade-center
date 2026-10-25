@@ -12,7 +12,7 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        $middleware->web(append: [\App\Http\Middleware\HandleInertiaRequests::class]);
+        $middleware->web(append: [\App\Http\Middleware\HandleInertiaRequests::class, \App\Http\Middleware\IdempotentMutation::class]);
         $middleware->alias(['admin' => \App\Http\Middleware\RequireAdmin::class]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

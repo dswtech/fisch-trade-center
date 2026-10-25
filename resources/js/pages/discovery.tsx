@@ -1,6 +1,7 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { Anchor, ArrowRight, Bell, BookOpen, Boxes, Compass, Filter, Fish, LayoutDashboard, Menu, Moon, Search, ShipWheel, SlidersHorizontal, Sparkles, Sun, UserRound, X } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { retryableMutation } from '../lib/network-recovery';
 import { hasInvertedValueRange } from '../lib/search';
 import type { ListingSummary, Locale, SharedProps, Theme, WflResult } from '../types';
 
@@ -16,8 +17,8 @@ type SearchFilters = {
 type Option = { id: string; name: string };
 
 const copy = {
-    id: { discover: 'Temukan Trade', search: 'Pilih filter trade', filters: 'Filter', searchAction: 'Cari', give: 'Kamu Berikan', receive: 'Kamu Terima', snapshot: 'Snapshot Value', latest: 'Listing Trade Terbaru', viewAll: 'Lihat semua', recommended: 'Rekomendasi', synthetic: 'DATA DEMO SYNTHETIC', dashboard: 'Dashboard', catalog: 'Katalog', inventory: 'Inventory', listings: 'Listing', simulator: 'Simulator W/F/L', profile: 'Profil', trade: 'Trade ini', fair: 'FAIR untuk kamu', fresh: 'Data terbaru', found: 'listing ditemukan', searching: 'Mencari trade aktif…', errorTitle: 'Pencarian belum dapat diperbarui', retry: 'Coba lagi', emptyTitle: 'Belum ada trade yang cocok', emptyBody: 'Ubah satu atau beberapa filter untuk menemukan listing aktif lain.', changeFilters: 'Ubah filter', loadNext: 'Halaman berikutnya', offeredItem: 'Item ditawarkan', anyOffered: 'Semua item tawaran', wantedItem: 'Item dicari', anyWanted: 'Semua item dicari', category: 'Kategori', allCategories: 'Semua kategori', minimumValue: 'Value minimum', maximumValue: 'Value maksimum', freshness: 'Kesegaran', anyTime: 'Kapan saja', lastHour: 'Satu jam terakhir', today: 'Hari ini', lastWeek: 'Tujuh hari terakhir', applyFilters: 'Terapkan filter', rangeError: 'Value maksimum harus sama dengan atau lebih besar dari value minimum.' },
-    en: { discover: 'Discover Trades', search: 'Choose trade filters', filters: 'Filters', searchAction: 'Search', give: 'You Give', receive: 'You Receive', snapshot: 'Value Snapshot', latest: 'Latest Trade Listings', viewAll: 'View all', recommended: 'Recommendations', synthetic: 'SYNTHETIC DEMO DATA', dashboard: 'Dashboard', catalog: 'Catalog', inventory: 'Inventory', listings: 'Listings', simulator: 'W/F/L Simulator', profile: 'Profile', trade: 'This trade', fair: 'FAIR for you', fresh: 'Latest data', found: 'listings found', searching: 'Searching active trades…', errorTitle: 'Search could not be updated', retry: 'Try again', emptyTitle: 'No matching currents', emptyBody: 'Adjust one or more filters to discover other active trades.', changeFilters: 'Change filters', loadNext: 'Next page', offeredItem: 'Offered item', anyOffered: 'Any offered item', wantedItem: 'Wanted item', anyWanted: 'Any wanted item', category: 'Category', allCategories: 'All categories', minimumValue: 'Minimum value', maximumValue: 'Maximum value', freshness: 'Freshness', anyTime: 'Any time', lastHour: 'Last hour', today: 'Today', lastWeek: 'Last week', applyFilters: 'Apply filters', rangeError: 'Maximum value must be equal to or greater than minimum value.' },
+    id: { discover: 'Temukan Trade', search: 'Pilih filter trade', filters: 'Filter', searchAction: 'Cari', give: 'Kamu Berikan', receive: 'Kamu Terima', snapshot: 'Snapshot Value', latest: 'Listing Trade Terbaru', viewAll: 'Lihat semua', recommended: 'Rekomendasi', synthetic: 'DATA DEMO SYNTHETIC', dashboard: 'Dashboard', catalog: 'Katalog', inventory: 'Inventory', listings: 'Listing', simulator: 'Simulator W/F/L', profile: 'Profil', trade: 'Trade ini', fair: 'FAIR untuk kamu', fresh: 'Data terbaru', found: 'listing ditemukan', searching: 'Mencari trade aktif…', errorTitle: 'Pencarian belum dapat diperbarui', networkError: 'Koneksi terputus. Hasil dan filter sebelumnya tetap tersedia.', retry: 'Coba lagi', emptyTitle: 'Belum ada trade yang cocok', emptyBody: 'Ubah satu atau beberapa filter untuk menemukan listing aktif lain.', changeFilters: 'Ubah filter', loadNext: 'Halaman berikutnya', offeredItem: 'Item ditawarkan', anyOffered: 'Semua item tawaran', wantedItem: 'Item dicari', anyWanted: 'Semua item dicari', category: 'Kategori', allCategories: 'Semua kategori', minimumValue: 'Value minimum', maximumValue: 'Value maksimum', freshness: 'Kesegaran', anyTime: 'Kapan saja', lastHour: 'Satu jam terakhir', today: 'Hari ini', lastWeek: 'Tujuh hari terakhir', applyFilters: 'Terapkan filter', rangeError: 'Value maksimum harus sama dengan atau lebih besar dari value minimum.' },
+    en: { discover: 'Discover Trades', search: 'Choose trade filters', filters: 'Filters', searchAction: 'Search', give: 'You Give', receive: 'You Receive', snapshot: 'Value Snapshot', latest: 'Latest Trade Listings', viewAll: 'View all', recommended: 'Recommendations', synthetic: 'SYNTHETIC DEMO DATA', dashboard: 'Dashboard', catalog: 'Catalog', inventory: 'Inventory', listings: 'Listings', simulator: 'W/F/L Simulator', profile: 'Profile', trade: 'This trade', fair: 'FAIR for you', fresh: 'Latest data', found: 'listings found', searching: 'Searching active trades…', errorTitle: 'Search could not be updated', networkError: 'The connection was interrupted. Previous results and filters remain available.', retry: 'Try again', emptyTitle: 'No matching currents', emptyBody: 'Adjust one or more filters to discover other active trades.', changeFilters: 'Change filters', loadNext: 'Next page', offeredItem: 'Offered item', anyOffered: 'Any offered item', wantedItem: 'Wanted item', anyWanted: 'Any wanted item', category: 'Category', allCategories: 'All categories', minimumValue: 'Minimum value', maximumValue: 'Maximum value', freshness: 'Freshness', anyTime: 'Any time', lastHour: 'Last hour', today: 'Today', lastWeek: 'Last week', applyFilters: 'Apply filters', rangeError: 'Maximum value must be equal to or greater than minimum value.' },
 };
 
 const fallbackListings: ListingSummary[] = [
@@ -47,6 +48,8 @@ export default function Discovery({
     const [filtersOpen, setFiltersOpen] = useState(false);
     const [loading, setLoading] = useState(false);
     const [clientError, setClientError] = useState<string | null>(null);
+    const [searchError, setSearchError] = useState<string | null>(null);
+    const retrySearch = useRef<() => void>(() => router.reload());
     const [searchFilters, setSearchFilters] = useState<SearchFilters>({
         offeredItem: initialFilters.offeredItem ?? '',
         wantedItem: initialFilters.wantedItem ?? '',
@@ -73,22 +76,33 @@ export default function Discovery({
     }, []);
 
     const persist = (next: { theme?: Theme; locale?: Locale }) => {
-        if (props.auth?.user) router.patch('/preferences', next, { preserveScroll: true });
+        if (props.auth?.user) retryableMutation('patch', '/preferences', next);
     };
     const updateFilter = (key: keyof SearchFilters, value: string) => {
         setClientError(null);
         setSearchFilters((current) => ({ ...current, [key]: value }));
+    };
+    const runSearch = (url: string, data: Record<string, string> = {}) => {
+        const attempt = () => router.get(url, data, {
+            preserveState: true,
+            preserveScroll: true,
+            onStart: () => setSearchError(null),
+            onNetworkError: () => setSearchError(t.networkError),
+            onError: () => setFiltersOpen(true),
+        });
+        retrySearch.current = attempt;
+        attempt();
     };
     const applyFilters = () => {
         if (hasInvertedValueRange(searchFilters.minValue, searchFilters.maxValue)) {
             setClientError(t.rangeError);
             return;
         }
-        router.get('/search', Object.fromEntries(Object.entries(searchFilters).filter(([, value]) => value !== '')), { preserveState: true, onError: () => setFiltersOpen(true) });
+        runSearch('/search', Object.fromEntries(Object.entries(searchFilters).filter(([, value]) => value !== '')));
         setFiltersOpen(false);
     };
     const nextHref = nextCursor ? `/search?${new URLSearchParams({ ...Object.fromEntries(Object.entries(searchFilters).filter(([, value]) => value !== '')), cursor: nextCursor }).toString()}` : null;
-    const serverError = props.flash?.error || Object.values(props.errors || {})[0];
+    const serverError = searchError || props.flash?.error || Object.values(props.errors || {})[0];
 
     return <><Head title={t.discover}/><div className="app-shell">
         <header className="topbar">
@@ -119,7 +133,7 @@ export default function Discovery({
                 <div className="trade-panel receive-panel"><PanelTitle n="02" over={t.trade} title={t.receive}/><ItemCard tone="violet" name="Aurora Rod" category="Fishing rod" value="2,600" icon={<Anchor/>}/><button className="add-item">+ Add item</button></div>
                 <aside className="insight-column"><div className="snapshot-card"><div><p>{t.snapshot}</p><strong>{snapshot.version}</strong></div><span className="live-dot">{t.fresh}</span><small>{snapshot.ageLabel}</small></div><div className="recommendation-card"><div className="recommendation-head"><div><p>{t.recommended}</p><h3>Closest currents</h3></div><Filter/></div>{['Aurora Rod + Pearl', 'Tidebreaker', 'Celestial Skin'].map((name, index) => <button key={name}><span>{index + 1}</span><div>{name}<small>{['+2.1% · Fair', '+7.8% · Fair', '+13.4% · Win'][index]}</small></div><ArrowRight/></button>)}</div></aside>
             </section>
-            <section className="listing-section" aria-busy={loading}><div className="section-head"><div><p className="eyebrow">{listings.length} {t.found}</p><h2>{t.latest}</h2></div><Link href="/listings">{t.viewAll}<ArrowRight/></Link></div>{loading && <div className="search-feedback loading" role="status" aria-live="polite"><span aria-hidden="true"/>{t.searching}</div>}{serverError && <div className="search-feedback error" role="alert"><div><strong>{t.errorTitle}</strong><span>{serverError}</span></div><button onClick={() => router.reload()}>{t.retry}</button></div>}{listings.length === 0 ? <div className="empty-state"><Fish/><h3>{t.emptyTitle}</h3><p>{t.emptyBody}</p><button className="filter-button" onClick={() => setFiltersOpen(true)}>{t.changeFilters}</button></div> : <div className="listing-grid">{listings.map((listing, index) => <article className="listing-card" data-listing-id={listing.id} key={listing.id}><div className="listing-top"><span className="anonymous"><UserRound/>{listing.alias}</span><span>{listing.age}</span></div><div className="listing-flow"><ItemGlyph index={index}/><div><small>OFFERS</small><strong>{listing.offered}</strong></div><ArrowRight/><div><small>WANTS</small><strong>{listing.wanted}</strong></div></div><div className="listing-foot"><strong>{listing.value?.toLocaleString() ?? '—'} pts</strong><span className={`status ${listing.status}`}>{listing.status.toUpperCase()}</span></div></article>)}</div>}{nextHref && <Link className="primary-button pagination-button" href={nextHref} preserveScroll>{t.loadNext}</Link>}</section>
+            <section className="listing-section" aria-busy={loading}><div className="section-head"><div><p className="eyebrow">{listings.length} {t.found}</p><h2>{t.latest}</h2></div><Link href="/listings">{t.viewAll}<ArrowRight/></Link></div>{loading && <div className="search-feedback loading" role="status" aria-live="polite"><span aria-hidden="true"/>{t.searching}</div>}{serverError && <div className="search-feedback error" role="alert"><div><strong>{t.errorTitle}</strong><span>{serverError}</span></div><button onClick={() => retrySearch.current()}>{t.retry}</button></div>}{listings.length === 0 ? <div className="empty-state"><Fish/><h3>{t.emptyTitle}</h3><p>{t.emptyBody}</p><button className="filter-button" onClick={() => setFiltersOpen(true)}>{t.changeFilters}</button></div> : <div className="listing-grid">{listings.map((listing, index) => <article className="listing-card" data-listing-id={listing.id} key={listing.id}><div className="listing-top"><span className="anonymous"><UserRound/>{listing.alias}</span><span>{listing.age}</span></div><div className="listing-flow"><ItemGlyph index={index}/><div><small>OFFERS</small><strong>{listing.offered}</strong></div><ArrowRight/><div><small>WANTS</small><strong>{listing.wanted}</strong></div></div><div className="listing-foot"><strong>{listing.value?.toLocaleString() ?? '—'} pts</strong><span className={`status ${listing.status}`}>{listing.status.toUpperCase()}</span></div></article>)}</div>}{nextHref && <button className="primary-button pagination-button" onClick={() => runSearch(nextHref)} disabled={loading}>{t.loadNext}</button>}</section>
         </main>
         <nav className="bottom-nav">{[[Compass, t.discover, '/'], [BookOpen, t.catalog, '/catalog'], [Fish, t.listings, '/listings'], [ShipWheel, 'W/F/L', '/simulator'], [UserRound, t.profile, '/login']].map(([Icon, label, href]: any) => <Link href={href} key={label}><Icon/><span>{label}</span></Link>)}</nav>
         {filtersOpen && <div className="sheet-backdrop" onMouseDown={() => setFiltersOpen(false)}><section className="filter-sheet" role="dialog" aria-modal="true" aria-label={t.filters} onMouseDown={(event) => event.stopPropagation()}>

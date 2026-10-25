@@ -5,10 +5,11 @@
     <script>(()=>{const t=localStorage.getItem('ftc-theme')||'dark';document.documentElement.classList.toggle('dark',t==='dark');document.documentElement.dataset.theme=t})()</script>
     <title>Fisch Trade Center</title>
     @inertiaHead
-    @if (app()->environment('local'))
+    @if (config('app.vite_dev_server'))
         <script type="module" src="http://localhost:5173/resources/js/app.tsx"></script>
     @else
-        <link rel="stylesheet" href="/build/assets/app.css"><script type="module" src="/build/assets/app.js"></script>
+        @php($assetVersion = is_file(public_path('build/assets/app.js')) ? filemtime(public_path('build/assets/app.js')) : 'missing')
+        <link rel="stylesheet" href="/build/assets/app.css?v={{ $assetVersion }}"><script type="module" src="/build/assets/app.js?v={{ $assetVersion }}"></script>
     @endif
 </head>
 <body>@inertia</body>

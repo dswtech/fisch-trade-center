@@ -27,6 +27,12 @@ final class ExampleTest extends TestCase
         self::assertSame(1000,$result->giveTotal); self::assertSame(20.0,$result->deltaPercent); self::assertSame('owner',$result->perspective); self::assertSame(WflStatus::Win,$result->status);
     }
 
+    public function test_decimal_values_are_not_rounded(): void
+    {
+        $result=(new WflCalculator)->calculate([['id'=>'give','quantity'=>2,'unit_value'=>7.5]],[['id'=>'receive','quantity'=>1,'unit_value'=>16.5]],10,'v1');
+        self::assertSame(15,$result->giveTotal); self::assertSame(16.5,$result->receiveTotal); self::assertSame(1.5,$result->delta); self::assertSame(10.0,$result->deltaPercent);
+    }
+
     public function test_missing_inputs_fail_closed(): void
     {
         $result=(new WflCalculator)->calculate([['id'=>'unknown','quantity'=>1,'unit_value'=>null]],[],null,null);

@@ -20,6 +20,6 @@ final class FixtureValueSource implements ValueSource
             throw new RuntimeException('Fixture value source has an invalid schema.');
         }
 
-        return $decoded;
+        return [...$decoded, 'source' => ['key' => 'fixture-v1', 'category' => 'mixed']];
     }
 }

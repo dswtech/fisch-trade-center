@@ -35,7 +35,7 @@ class ListingController extends Controller
     {
         $catalogIds=collect([...$offered,...$wanted])->pluck('catalog_item_id')->unique()->values();
         $values=$snapshotId?DB::table('catalog_item_values')->where('snapshot_id',$snapshotId)->whereIn('catalog_item_id',$catalogIds)->pluck('unit_value','catalog_item_id'):collect();
-        $total=static function(array $items)use($values):?int{if($items===[]||collect($items)->contains(fn(array $item):bool=>!$values->has($item['catalog_item_id'])))return null;return collect($items)->sum(fn(array $item):int=>(int)$values[$item['catalog_item_id']]*(int)$item['quantity']);};
+        $total=static function(array $items)use($values):int|float|null{if($items===[]||collect($items)->contains(fn(array $item):bool=>!$values->has($item['catalog_item_id'])))return null;$value=collect($items)->sum(fn(array $item):float=>(float)$values[$item['catalog_item_id']]*(int)$item['quantity']);return floor($value)===$value?(int)$value:$value;};
         $version=ListingVersion::create(['listing_id'=>$listing->id,'version'=>$versionNumber,'value_snapshot_id'=>$snapshotId,'offered_items'=>$offered,'wanted_items'=>$wanted,'offered_value'=>$total($offered),'wanted_value'=>$total($wanted)]);
         $rows=collect(['offered'=>$offered,'wanted'=>$wanted])->flatMap(fn(array $items,string $side)=>collect($items)->map(fn(array $item):array=>['catalog_item_id'=>$item['catalog_item_id'],'side'=>$side,'quantity'=>$item['quantity'],'unit_value'=>$values->get($item['catalog_item_id'])]))->all();
         $version->items()->createMany($rows);

@@ -18,13 +18,18 @@ final class ValueImportValidator
                     $errors[] = ['row' => $index, 'code' => "missing_{$field}"];
                 }
             }
-            if (isset($row['value']) && (! is_int($row['value']) || $row['value'] < 0)) {
+            foreach (['external_key', 'category', 'name'] as $field) {
+                if (array_key_exists($field, $row) && (! is_string($row[$field]) || trim($row[$field]) === '')) {
+                    $errors[] = ['row' => $index, 'code' => "invalid_{$field}"];
+                }
+            }
+            if (isset($row['value']) && (! is_int($row['value']) && ! is_float($row['value']) || ! is_finite((float) $row['value']) || $row['value'] < 0)) {
                 $errors[] = ['row' => $index, 'code' => 'invalid_value'];
             }
             if (isset($row['category']) && ! in_array($row['category'], ['skin', 'boat', 'fishing_rod'], true)) {
                 $errors[] = ['row' => $index, 'code' => 'invalid_category'];
             }
-            if (isset($row['external_key'])) {
+            if (isset($row['external_key']) && is_string($row['external_key']) && $row['external_key'] !== '') {
                 if (isset($keys[$row['external_key']])) {
                     $errors[] = ['row' => $index, 'code' => 'duplicate_external_key'];
                 }

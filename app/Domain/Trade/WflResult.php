@@ -6,9 +6,9 @@ final readonly class WflResult
 {
     /** @param list<array{code: string, item_id?: string}> $reasons */
     public function __construct(
-        public ?int $giveTotal,
-        public ?int $receiveTotal,
-        public ?int $delta,
+        public int|float|null $giveTotal,
+        public int|float|null $receiveTotal,
+        public int|float|null $delta,
         public ?float $deltaPercent,
         public ?string $snapshotVersion,
         public string $perspective,
