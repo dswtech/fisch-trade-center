@@ -78,7 +78,7 @@
 - `composer test` pada SQLite `:memory:`: 57 test, 571 assertion, lulus.
 - Vitest lulus 14/14; TypeScript strict typecheck lulus; Vite build lulus; Playwright desktop/mobile lulus 22/22 termasuk deal/reveal dua participant, halaman time controls admin, dan WCAG A/AA.
 - Test PostgreSQL disposable dengan dua proses/koneksi lulus untuk acceptance proposal dan final acceptance deal. Deal concurrency menghasilkan status `revealed`, tepat 2 acceptance, 2 identity snapshot, 2 reveal entitlement, dan 1 audit reveal. Benchmark 100.000 listing terbaru mencatat p95 maksimum `357,33 ms`, di bawah target `1.000 ms`.
-- Syntax PHP dan Bash, production config cache, route cache, YAML CI, link Markdown, manifest dokumentasi, dan `git diff --check` lulus. Backup/restore Linux belum dieksekusi lokal; job CI Linux yang baru akan menjadi bukti eksekusinya setelah commit dipush.
+- Syntax PHP dan Bash, production config cache, route cache, YAML CI, link Markdown, manifest dokumentasi, dan `git diff --check` lulus. GitHub Actions run `40285977892` lulus untuk job aplikasi Windows dan `production-operations` Linux/PostgreSQL 16, termasuk migration disposable, concurrency, benchmark, backup checksum/row-count, dan restore drill.
 - Lint design-taste pada halaman trade/time controls menghasilkan 0 fail dan 1 warning untuk penggunaan em-dash sebagai simbol nilai kosong/label.
 - Build lokal memakai Node 22.11.0 dan memberi warning karena Vite meminta 22.12+; build tetap berhasil. Asset `/images/trade-ocean-field.png` diselesaikan saat runtime.
 - Audit statis memetakan seluruh 69 requirement aktif tepat ke satu fase utama. Bukti diperiksa melalui route, controller/service, UI, migration, dan test; hasilnya dicatat di `development-phases.md`.
@@ -94,6 +94,7 @@
 - Fase 4 selesai: deal/reveal, expiry otomatis, time controls admin non-production, report participant, queue audit operator, update status report, suspend/lift, authorization, rate limit, dan blokir trade mutation untuk akun suspended sudah terhubung ke route/UI serta diuji.
 - Fase 5 belum dimulai dan bukan gate MVP. Keputusan awal gateway mock/IDR/batas deposit/model fee sudah dicatat, tetapi keputusan production finansial masih terbuka.
 - Fase 6 ready for rollout tetapi launch tetap diblokir encrypted off-host backup, akses host, konfigurasi monitor eksternal, dan restore drill off-host.
+- Implementasi Fase 6 dipush ke `origin/main` sebagai commit `6251761` (`feat: prepare phase six production operations`); kedua job CI lulus.
 
 ## Keputusan terbuka produk
 
@@ -102,10 +103,9 @@
 
 ## Next step
 
-1. Commit/push perubahan Fase 6, lalu pastikan job CI Linux backup/restore lulus.
-2. Sediakan akses Linux VM, encrypted off-host backup, dan provider-neutral monitor; jalankan restore drill dari off-host copy.
-3. Migration persisten dan deployment nyata tetap hanya boleh dijalankan setelah pengguna memberi instruksi eksplisit.
-4. Fase 5 tetap tidak dimulai sebelum sisa keputusan provider, nominal fee, refund, dan reconciliation ditutup.
+1. Sediakan akses Linux VM, encrypted off-host backup, dan provider-neutral monitor; jalankan restore drill dari off-host copy.
+2. Migration persisten dan deployment nyata tetap hanya boleh dijalankan setelah pengguna memberi instruksi eksplisit.
+3. Fase 5 tetap tidak dimulai sebelum sisa keputusan provider, nominal fee, refund, dan reconciliation ditutup.
 
 ## Cara memperbarui memory
 
