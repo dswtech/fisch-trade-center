@@ -64,6 +64,7 @@
 - Fase 1 hampir selesai; gap route/UI status-alias, lifecycle Rod, pembuktian rollback publish, dan rollout migration persisten tertutup.
 - Fase 2 hampir selesai; route edit, invalidasi listing, rate limit mutation, dan kontrol homepage tertutup. INV-04 tidak aktif sampai ada aturan atribut kategori konkret.
 - Fase 3 hampir selesai; recommendation dan negotiation telah terhubung end-to-end melalui HTTP/UI, participant authorization, history proposal, stale-version rejection, retry idempotent, invalidasi inventory/listing, redaction, dan test expiry. Sisa gerbang adalah keputusan durasi serta schedule expiry, test balapan PostgreSQL dua koneksi, dan benchmark recommendation.
+- Implementasi Fase 3 tersebut di-push ke `origin/main` sebagai commit `0d4a446` (`feat: connect phase three negotiation flow`).
 - Fase 4 baru fondasi; deal dan trust-operation controller belum terhubung ke route/UI/middleware serta belum memiliki test atomicity, concurrency, dan privacy reveal.
 - Fase 5 belum dimulai dan bukan gate MVP. Fase 6 belum siap karena keputusan recovery/retention, monitoring, runbook, rollout, dan re-verifikasi masih terbuka.
 
