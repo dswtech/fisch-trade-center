@@ -92,7 +92,7 @@ Setelah final deal berhasil, kedua pihak boleh melihat USN dan IGN satu sama lai
 - Route detail negotiation hanya tersedia bagi initiator atau owner. Discovery dan recommendation tidak mengirim email, USN, atau IGN pihak lawan.
 - Counteroffer mengganti sisi milik actor dan membawa sisi lawan dari proposal aktif. Versi lama menjadi `superseded` dan tetap tersedia sebagai history.
 - Perubahan inventory yang dipakai proposal atau perubahan/cancel listing mengubah negotiation dan proposal aktif menjadi `invalidated`.
-- Proposal aktif kedaluwarsa setelah 24 jam dan negotiation setelah 7 hari. Scheduler `trade:expire-phase-three` berjalan setiap menit dan tidak menerapkan expiry pra-deal/deal sebelum kebijakan Fase 4 diputuskan.
+- Proposal aktif kedaluwarsa setelah 24 jam dan negotiation setelah 7 hari. Scheduler `trade:expire-phase-three` berjalan setiap menit.
 - Participant dapat mengirim report reason-code terstruktur dari negotiation. Operator/admin mempunyai queue trust operations untuk review report dan suspend/lift akun; suspension menolak mutation trade baru tetapi tidak memblokir report atau logout.
 
 ### Deal
@@ -100,8 +100,11 @@ Setelah final deal berhasil, kedua pihak boleh melihat USN dan IGN satu sama lai
 `pre_deal → awaiting_final_acceptance → finalizing → revealed | failed | cancelled | expired`
 
 - Kedua pihak harus menyetujui proposal version dan server type yang sama.
-- `finalizing` melakukan revalidasi, debit biaya, pembentukan immutable deal snapshot, dan reveal dalam satu transaction boundary.
+- `finalizing` melakukan revalidasi, penerapan `fee = 0`, pembentukan immutable deal snapshot, dan reveal entitlement dalam satu transaction boundary.
 - Kegagalan apa pun sebelum commit tidak boleh menghasilkan debit parsial atau reveal identitas.
+- Pra-deal kedaluwarsa setelah 30 menit. Reveal entitlement kedaluwarsa 30 hari setelah finalisasi tanpa menghapus identity snapshot immutable.
+- Scheduler `trade:expire-phase-four` berjalan setiap menit. Pada `local`, `development`, `staging`, dan `testing`, route admin `/admin/time-controls` menyediakan trigger expiry manual yang diaudit; route tidak didaftarkan pada production.
+- Deal hanya dapat dilihat participant. USN/IGN lawan tetap teredaksi sampai status `revealed` dan entitlement viewer masih aktif.
 
 ### Deposit
 

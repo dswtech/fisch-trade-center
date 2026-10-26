@@ -1,6 +1,7 @@
 <?php
 
 use App\Domain\Trade\PhaseTwoExpiryService;
+use App\Domain\Trade\PhaseFourExpiryService;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
@@ -12,6 +13,11 @@ Artisan::command('inspire', function () {
 
 Schedule::call(fn (): array => app(PhaseTwoExpiryService::class)->expire())
     ->name('trade:expire-phase-three')
+    ->everyMinute()
+    ->withoutOverlapping();
+
+Schedule::call(fn (): array => app(PhaseFourExpiryService::class)->expire())
+    ->name('trade:expire-phase-four')
     ->everyMinute()
     ->withoutOverlapping();
 

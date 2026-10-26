@@ -44,6 +44,7 @@ final class AdminController extends Controller
             'fairThreshold' => DB::table('system_settings')->where('key', 'fair_threshold_percent')->value('value'),
             'rods' => DB::table('rods')->orderByDesc('is_active')->orderBy('name')->get(['public_id as id', 'name', 'is_active as isActive']),
             'catalogItems' => $items,
+            'manualTimeControlsEnabled' => app()->environment(['local', 'development', 'staging', 'testing']),
         ]);
     }
     public function threshold(Request $request):RedirectResponse

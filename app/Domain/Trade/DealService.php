@@ -4,6 +4,7 @@ namespace App\Domain\Trade;
 
 use App\Models\Deal;
 use App\Models\DealIdentitySnapshot;
+use App\Models\Listing;
 use App\Models\Negotiation;
 use App\Models\PreDealVersion;
 use App\Models\ProposalVersion;
@@ -22,6 +23,7 @@ final class DealService
             $negotiation = Negotiation::whereKey($negotiation->id)->lockForUpdate()->firstOrFail();
             $this->guardParticipant($actor, $negotiation);
             abort_unless($negotiation->status === 'accepted', 409, 'Proposal must be accepted first.');
+            abort_if(Deal::query()->where('negotiation_id', $negotiation->id)->exists(), 409, 'A deal already exists for this negotiation.');
             $proposal = ProposalVersion::where('negotiation_id', $negotiation->id)->where('version', $negotiation->active_proposal_version)->where('status', 'accepted')->firstOrFail();
             PreDealVersion::where('negotiation_id', $negotiation->id)->where('status', 'active')->update(['status' => 'superseded']);
             $next = ((int) PreDealVersion::where('negotiation_id', $negotiation->id)->max('version')) + 1;
@@ -71,10 +73,14 @@ final class DealService
                 return $deal;
             }
             abort_unless($deal->status === 'awaiting_final_acceptance' && $deal->expires_at->isFuture(), 409, 'Deal is not available for final acceptance.');
+            abort_unless($negotiation->status === 'accepted', 409, 'Negotiation is no longer accepted.');
             abort_if(config('phase_two.wallet_enabled') || config('phase_two.fee_enabled') || (float) $deal->fee_quote !== 0.0, 503, 'Wallet and fee settlement are not configured.');
             $proposal = ProposalVersion::whereKey($deal->proposal_version_id)->lockForUpdate()->firstOrFail();
             $preDeal = PreDealVersion::whereKey($deal->pre_deal_version_id)->lockForUpdate()->firstOrFail();
             abort_unless($proposal->status === 'accepted' && $preDeal->status === 'accepted', 409, 'Deal binding is stale.');
+            abort_unless($proposal->negotiation_id === $negotiation->id && $preDeal->proposal_version_id === $proposal->id, 409, 'Deal binding is invalid.');
+            $listing = Listing::query()->whereKey($negotiation->listing_id)->lockForUpdate()->firstOrFail();
+            abort_unless($listing->status === 'active' && (! $listing->expires_at || $listing->expires_at->isFuture()), 409, 'Listing is no longer active.');
             $this->negotiations->validateProposalInventory($proposal);
             $bindingHash = hash('sha256', implode('|', [$proposal->id, $preDeal->id, '0.00', $deal->expires_at->toIso8601String()]));
             DB::table('deal_acceptances')->insertOrIgnore(['deal_id' => $deal->id, 'user_id' => $actor->id, 'binding_hash' => $bindingHash, 'accepted_at' => now()]);
@@ -112,7 +118,7 @@ final class DealService
             $snapshot = DealIdentitySnapshot::where('deal_id', $deal->id)->where('user_id', $entitlement->subject_user_id)->firstOrFail();
             $identity = ['usn' => $snapshot->usn, 'ign' => $snapshot->ign, 'unverified' => true, 'availableUntil' => $entitlement->expires_at];
         }
-        return ['id' => $deal->public_id, 'status' => $deal->status, 'feeQuote' => (float) $deal->fee_quote, 'expiresAt' => $deal->expires_at, 'snapshot' => $deal->snapshot, 'counterpartyIdentity' => $identity];
+        return ['id' => $deal->public_id, 'negotiationId' => $negotiation->public_id, 'status' => $deal->status, 'feeQuote' => (float) $deal->fee_quote, 'expiresAt' => $deal->expires_at, 'snapshot' => $deal->snapshot, 'counterpartyIdentity' => $identity];
     }
 
     private function safeSnapshot(ProposalVersion $proposal, PreDealVersion $preDeal): array
@@ -121,7 +127,14 @@ final class DealService
             ->where('proposal_items.proposal_version_id', $proposal->id)->orderBy('proposal_items.id')
             ->get(['catalog_items.public_id as catalogItemId', 'catalog_items.canonical_name as name', 'proposal_items.side', 'proposal_items.quantity', 'proposal_items.unit_value as unitValue'])
             ->map(fn ($row): array => (array) $row)->all();
-        return ['proposalVersion' => $proposal->version, 'serverChoiceVersion' => $preDeal->version, 'serverType' => $preDeal->server_type, 'feeQuote' => 0, 'items' => $items];
+        return [
+            'proposalVersion' => $proposal->version,
+            'valueSnapshotVersion' => DB::table('value_snapshots')->where('id', $proposal->value_snapshot_id)->value('version'),
+            'serverChoiceVersion' => $preDeal->version,
+            'serverType' => $preDeal->server_type,
+            'feeQuote' => 0,
+            'items' => $items,
+        ];
     }
 
     private function guardParticipant(User $actor, Negotiation $negotiation): void

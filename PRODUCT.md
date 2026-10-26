@@ -43,6 +43,9 @@ Produk bukan sekadar papan listing: setiap hasil penilaian dan listing yang bern
 - `fair_threshold_percent` awal adalah `10`; perubahan admin berlaku prospektif dan diaudit.
 - Listing aktif kedaluwarsa setelah 14 hari.
 - Proposal aktif kedaluwarsa setelah 24 jam dan negotiation setelah 7 hari. Scheduler Fase 3 menutup state tersebut tanpa menghapus riwayat.
+- Pra-deal kedaluwarsa setelah 30 menit. Akses identity snapshot setelah reveal berlaku 30 hari; expiry tidak menghapus snapshot immutable.
+- Environment local, development, staging, dan testing menyediakan halaman admin khusus untuk memicu expiry pra-deal atau akses reveal secara manual. Surface ini tidak tersedia di production dan setiap tindakan diaudit.
+- Deal MVP memakai `fee = 0`, mewajibkan disclaimer non-escrow, dan baru membuka identity snapshot setelah final acceptance kedua pihak berhasil atomik.
 - Katalog/value berasal dari CSV UTF-8 yang diunggah admin. Upload hanya membuat staging; publish manual melakukan partial upsert dan membuat snapshot immutable secara atomik.
 - Perubahan value di atas 25% menghasilkan warning yang wajib dikonfirmasi. Baris dengan value kosong menghapus value item pada snapshot baru.
 - Kategori awal adalah `rod_skin`, `boat`, `relic_set`, dan `other`; model kategori tidak boleh menjadi enum tertutup.

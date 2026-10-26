@@ -49,4 +49,24 @@ describe('phase three trade screens', () => {
         expect(html).toContain('name="targetId" value="negotiation-1"');
         expect(html).toContain('name="reasonCode"');
     });
+
+    it('keeps identity hidden until reveal and renders zero-fee final acceptance', () => {
+        const waiting = renderToStaticMarkup(<Trade section="deal" deal={{
+            id: 'deal-1', negotiationId: 'negotiation-1', status: 'awaiting_final_acceptance', serverType: 'public_server',
+            snapshotVersion: 2, expiresAt: '2026-10-26T00:30:00Z', feeQuote: 0, finalAcceptedByMe: false, identity: null,
+        }}/>);
+        expect(waiting).toContain('0 — wallet disabled');
+        expect(waiting).toContain('action="/negotiations/negotiation-1/final-accept"');
+        expect(waiting).toContain('Identity remains hidden');
+        expect(waiting).not.toContain('USN:');
+
+        const revealed = renderToStaticMarkup(<Trade section="deal" deal={{
+            id: 'deal-1', negotiationId: 'negotiation-1', status: 'revealed', serverType: 'public_server', snapshotVersion: 2,
+            expiresAt: '2026-10-26T00:30:00Z', revealExpiresAt: '2026-11-25T00:00:00Z', feeQuote: 0,
+            finalAcceptedByMe: true, identity: {usn: 'SafeUser', ign: 'SafeIGN'},
+        }}/>);
+        expect(revealed).toContain('USN:');
+        expect(revealed).toContain('SafeUser');
+        expect(revealed).toContain('SafeIGN');
+    });
 });

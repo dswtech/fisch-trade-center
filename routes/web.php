@@ -18,6 +18,8 @@ use App\Http\Controllers\NegotiationController;
 use App\Http\Controllers\OperatorAuditController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\SuspensionController;
+use App\Http\Controllers\DealController;
+use App\Http\Controllers\AdminTimeControlController;
 use Illuminate\Foundation\Auth\EmailVerificationRequest;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -56,6 +58,7 @@ Route::middleware('auth')->group(function (): void {
         Route::get('/recommendations/{listing}', [PhaseThreePageController::class, 'recommendations'])->name('recommendations.show');
         Route::get('/negotiations', [PhaseThreePageController::class, 'index'])->name('negotiations.index');
         Route::get('/negotiations/{negotiation}', [PhaseThreePageController::class, 'show'])->name('negotiations.show');
+        Route::get('/deals/{deal}', [DealController::class, 'show'])->name('deals.show');
         Route::post('/reports', [ReportController::class, 'store'])->middleware('throttle:20,1')->name('reports.store');
         Route::middleware(['throttle:60,1', 'not-suspended'])->group(function (): void {
             Route::post('/inventory', [InventoryController::class, 'store'])->name('inventory.store');
@@ -69,6 +72,9 @@ Route::middleware('auth')->group(function (): void {
             Route::post('/negotiations/{negotiation}/accept', [NegotiationController::class, 'accept'])->name('negotiations.accept');
             Route::post('/negotiations/{negotiation}/reject', [NegotiationController::class, 'reject'])->name('negotiations.reject');
             Route::post('/negotiations/{negotiation}/cancel', [NegotiationController::class, 'cancel'])->name('negotiations.cancel');
+            Route::post('/negotiations/{negotiation}/server-choice', [DealController::class, 'proposeServer'])->name('negotiations.server-choice');
+            Route::post('/negotiations/{negotiation}/server-accept', [DealController::class, 'acceptServer'])->name('negotiations.server-accept');
+            Route::post('/negotiations/{negotiation}/final-accept', [DealController::class, 'finalAccept'])->name('negotiations.final-accept');
         });
         Route::middleware('operator')->prefix('operator')->name('operator.')->group(function (): void {
             Route::get('/audit', OperatorAuditController::class)->name('audit');
@@ -93,5 +99,12 @@ Route::middleware('auth')->group(function (): void {
                 Route::delete('/catalog-items/{item}/thumbnail', [CatalogThumbnailController::class, 'destroy'])->name('catalog-items.thumbnail.destroy');
             });
         });
+        if (app()->environment(['local', 'development', 'staging', 'testing'])) {
+            Route::middleware(['admin', 'throttle:60,1'])->prefix('admin/time-controls')->name('admin.time-controls.')->group(function (): void {
+                Route::get('/', [AdminTimeControlController::class, 'index'])->name('index');
+                Route::post('/pre-deals/{preDeal}/expire', [AdminTimeControlController::class, 'expirePreDeal'])->name('pre-deals.expire');
+                Route::post('/deals/{deal}/expire-reveal', [AdminTimeControlController::class, 'expireReveal'])->name('deals.expire-reveal');
+            });
+        }
     });
 });

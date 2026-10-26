@@ -3,7 +3,7 @@
 | Item | Keterangan |
 |---|---|
 | Dokumen | Roadmap fase development dan audit gap implementasi |
-| Versi | v1.0 |
+| Versi | v1.1 |
 | Tanggal audit | 26 Oktober 2026 |
 | Pemilik | Product dan Engineering |
 | Status | Aktif |
@@ -20,7 +20,7 @@ Target MVP mencakup Fase 0–4 dengan wallet dan fee nonaktif serta `fee = 0`. F
 | 1 — Catalog Data & Admin | CAT-01–CAT-06, AUD-04, ADM-01, ADM-03 | Fase 0 | Hampir selesai |
 | 2 — Player Trade Core | INV-01–INV-04, LST-01–LST-06, SRC-01–SRC-05 | Fase 0–1 | Hampir selesai |
 | 3 — Recommendation & Negotiation | REC-01–REC-06, NEG-01–NEG-07 | Fase 0–2 | Selesai |
-| 4 — Pre-deal, Reveal & Trust Operations | NEG-08, DEL-01–DEL-08, AUD-01–AUD-03, ADM-02, ADM-04–ADM-05 | Fase 0–3 | Parsial kuat |
+| 4 — Pre-deal, Reveal & Trust Operations | NEG-08, DEL-01–DEL-08, AUD-01–AUD-03, ADM-02, ADM-04–ADM-05 | Fase 0–3 | Selesai |
 | 5 — Wallet, Payment & Dispute Finansial | WAL-01–WAL-06, PAY-01–PAY-05 | Fase 0–4 dan keputusan produk pembayaran | Belum dimulai; bukan gate MVP |
 | 6 — Production Readiness & Launch | Seluruh NFR dan gerbang operasional | Fase 0–4 untuk MVP; Fase 5 untuk monetisasi | Belum siap |
 
@@ -34,7 +34,7 @@ Pemetaan di atas menempatkan seluruh 69 requirement aktif tepat pada satu fase u
 | 1 | Route admin import, lifecycle Rod, metadata katalog, dan thumbnail di `routes/web.php`; panel `resources/js/pages/admin.tsx` | `app/Domain/Catalog`, controller admin katalog, migration Rod/thumbnail | `CatalogValueCsvImportTest.php` termasuk failure injection publish dan `resources/js/tests/admin.test.tsx` |
 | 2 | Route inventory, listing termasuk halaman edit, search, dan simulator di `routes/web.php`; UI workspace/discovery | Controller inventory/listing/search, `DiscoveryPresenter`, `WflCalculator`, model listing version | `ExampleTest.php`, E2E discovery/player flow/accessibility, dan benchmark search |
 | 3 | Route recommendation, daftar/detail negotiation, start, counter, accept, reject, dan cancel di `routes/web.php`; UI `trade.tsx` dapat dijangkau dari listing discovery | `PhaseThreePageController`, `NegotiationController`, `RecommendationService`, `NegotiationService`, `NegotiationInvalidator`, `PhaseTwoExpiryService` | `PhaseThreeNegotiationTest.php`, `resources/js/tests/trade.test.tsx`, dan E2E negotiation di `player-flow.spec.ts` |
-| 4 | Report, suspension, dan audit operator memiliki route/UI operasional; deal/reveal belum diroute | `DealService`, controller report/suspension/audit, middleware operator/suspension, schema deal/reveal | `ModerationAuditTest.php`, report participant di `PhaseThreeNegotiationTest.php`, serta component/E2E trust operations; belum ada test deal/reveal HTTP atau concurrency |
+| 4 | Route/UI server choice, final acceptance, deal/reveal, report, suspension, audit operator, dan time controls admin non-production tersedia | `DealService`, `PhaseFourExpiryService`, controller deal/report/suspension/audit/time-control, middleware operator/suspension, schema deal/reveal | `PhaseThreeNegotiationTest.php`, `ModerationAuditTest.php`, component/E2E trade dan trust operations, serta concurrency PostgreSQL final acceptance |
 | 5 | Tidak ada route atau UI wallet/payment | ADR-005 saja; schema dan domain wallet/payment belum tersedia | Belum ada |
 | 6 | Health route `/up`; belum ada surface operasi production | Workflow CI, harness E2E, benchmark PostgreSQL, audit correlation | Suite terakhir tercatat di memory; belum diulang pada audit roadmap |
 
@@ -82,14 +82,9 @@ Pemetaan di atas menempatkan seluruh 69 requirement aktif tepat pada satu fase u
 
 **Outcome:** kedua pihak dapat menyepakati server, memberi final acceptance, dan menerima reveal terbatas secara atomik dengan `fee = 0`; operator memiliki minimum trust operations.
 
-**Bukti:** schema/model dan `DealService` tersedia sebagai fondasi deal. Report terstruktur dapat dikirim participant dari negotiation. Operator/admin dapat membuka queue audit, mengubah status report, suspend/lift akun, dan suspension memblokir trade mutation sambil tetap mengizinkan report/logout. Seluruh route memakai authorization, rate limit, audit, UI operasional, feature/component test, dan jalur E2E admin.
+**Bukti:** kedua participant dapat menerima proposal yang sama, memilih dan menerima server, menyetujui disclaimer, melakukan final acceptance, lalu membuka deal dengan `fee = 0`. Identity snapshot lawan baru tersedia setelah commit final kedua. Report terstruktur dapat dikirim participant. Operator/admin dapat membuka queue audit, mengubah status report, suspend/lift akun, dan suspension memblokir trade mutation sambil tetap mengizinkan report/logout. Seluruh route memakai authorization, rate limit, audit, UI operasional, feature/component test, dan jalur E2E desktop/mobile.
 
-**Gap dan blocker:**
-
-- Pre-deal, final acceptance, dan view deal belum memiliki controller atau route.
-- Route/UI report, suspension, dan operator audit sudah selesai. Kebijakan detail report/no-show/appeal tetap keputusan operasi sebelum launch.
-- Belum ada test end-to-end untuk server choice, binding final acceptance, retry, final acceptance bersamaan, rollback, entitlement reveal, atau larangan reveal prematur.
-- Expiry pra-deal/reveal serta kebijakan report, no-show, suspension, dan appeal masih terbuka.
+**Gap dan blocker:** gerbang capability tertutup pada 26 Oktober 2026. Pra-deal kedaluwarsa setelah 30 menit dan reveal entitlement setelah 30 hari melalui job `trade:expire-phase-four` setiap menit. Environment local/development/staging/testing memiliki halaman admin khusus untuk memicu expiry secara manual dan diaudit; route tidak didaftarkan pada production. Test membuktikan authorization participant, larangan reveal prematur, disclaimer wajib, immutable identity snapshot, retry tepat sekali, rollback, expiry otomatis/manual, serta final acceptance bersamaan pada dua koneksi PostgreSQL. Kebijakan detail report/no-show/appeal dan retensi tetap pekerjaan operasional Fase 6, bukan gap capability Fase 4.
 
 **Gerbang keluar:** route dan UI dapat digunakan kedua pihak, disclaimer non-escrow wajib diterima, finalisasi/retry bersifat idempotent, test concurrency membuktikan tidak ada reveal prematur, dan report minimum dapat ditangani operator. Wallet serta fee harus tetap nonaktif dan UI harus menyatakan biaya nol.
 

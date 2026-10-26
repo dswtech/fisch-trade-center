@@ -6,6 +6,8 @@ use App\Domain\Trade\RecommendationService;
 use App\Domain\Trade\WflCalculator;
 use App\Models\Listing;
 use App\Models\Negotiation;
+use App\Models\Deal;
+use App\Models\PreDealVersion;
 use App\Models\ProposalVersion;
 use App\Models\Report;
 use Illuminate\Http\Request;
@@ -68,6 +70,8 @@ final class PhaseThreePageController extends Controller
         abort_unless($negotiation->isParticipant($request->user()->id), 404);
         $proposals = ProposalVersion::where('negotiation_id', $negotiation->id)->orderByDesc('version')->get()
             ->map(fn (ProposalVersion $proposal): array => $this->proposal($proposal, $negotiation, $request->user()->id, $calculator));
+        $preDeal = PreDealVersion::query()->where('negotiation_id', $negotiation->id)->latest('version')->first();
+        $deal = Deal::query()->where('negotiation_id', $negotiation->id)->first();
 
         return Inertia::render('trade', [
             'section' => 'negotiation',
@@ -80,7 +84,35 @@ final class PhaseThreePageController extends Controller
                 ->where('target_public_id', $negotiation->public_id)->latest('id')->get()
                 ->map(fn (Report $report): array => ['id' => $report->public_id, 'reason' => $report->reason_code, 'status' => $report->status, 'createdAt' => $report->created_at->toIso8601String()]),
             'reportingEnabled' => true,
+            'preDeal' => $this->preDeal($negotiation, $preDeal, $deal, $request->user()->id),
         ]);
+    }
+
+    private function preDeal(Negotiation $negotiation, ?PreDealVersion $preDeal, ?Deal $deal, int $viewerId): ?array
+    {
+        if (! $preDeal) {
+            return $negotiation->status === 'accepted' ? [
+                'id' => null, 'version' => 0, 'serverType' => null, 'status' => 'awaiting_server_choice',
+                'expiresAt' => null, 'acceptedByMe' => false, 'acceptedByThem' => false,
+                'dealId' => null, 'finalAcceptedByMe' => false, 'finalAcceptedByThem' => false,
+            ] : null;
+        }
+
+        $acceptedIds = DB::table('pre_deal_acceptances')->where('pre_deal_version_id', $preDeal->id)->pluck('user_id');
+        $finalAcceptedIds = $deal ? DB::table('deal_acceptances')->where('deal_id', $deal->id)->pluck('user_id') : collect();
+
+        return [
+            'id' => $preDeal->public_id,
+            'version' => $preDeal->version,
+            'serverType' => $preDeal->server_type,
+            'status' => $deal?->status ?? $preDeal->status,
+            'expiresAt' => $preDeal->expires_at->toIso8601String(),
+            'acceptedByMe' => $acceptedIds->contains($viewerId),
+            'acceptedByThem' => $acceptedIds->contains(fn ($id): bool => (int) $id !== $viewerId),
+            'dealId' => $deal?->public_id,
+            'finalAcceptedByMe' => $finalAcceptedIds->contains($viewerId),
+            'finalAcceptedByThem' => $finalAcceptedIds->contains(fn ($id): bool => (int) $id !== $viewerId),
+        ];
     }
 
     private function listingSide(int $versionId, string $side): string

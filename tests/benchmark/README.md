@@ -6,7 +6,7 @@ Jalankan dari root repository pada Windows:
 powershell -NoProfile -ExecutionPolicy Bypass -File tests/benchmark/run-postgres.ps1
 ```
 
-Harness membuat cluster PostgreSQL sementara di `tests/benchmark/.pgdata`, memakai port `55432`, menjalankan migration pada database `fisch_trade_benchmark`, menguji final acceptance proposal secara bersamaan melalui dua proses, memuat 100.000 listing synthetic dan 200.000 baris item terindeks, lalu menghentikan dan menghapus cluster beserta log-nya.
+Harness membuat cluster PostgreSQL sementara di `tests/benchmark/.pgdata`, memakai port `55432`, menjalankan migration pada database `fisch_trade_benchmark`, menguji acceptance proposal dan final acceptance deal secara bersamaan melalui proses terpisah, memuat 100.000 listing synthetic dan 200.000 baris item terindeks, lalu menghentikan dan menghapus cluster beserta log-nya.
 
 Penjagaan menolak database selain environment `benchmark` dengan nama tepat `fisch_trade_benchmark`. Tidak ada koneksi ke database development atau produksi.
 
@@ -32,3 +32,10 @@ Benchmark mengukur query lokal pada hardware pengembangan, bukan latency jaringa
 - Trigger khusus database disposable memperpanjang overlap transaksi agar row lock benar-benar diuji.
 - Gerbang lulus hanya bila tepat dua acceptance dan dua audit event tercatat, lalu proposal serta negotiation sama-sama berstatus `accepted`.
 - Eksekusi terverifikasi: lulus. Benchmark search yang berjalan pada cluster sama mencatat p95 maksimum `501,11 ms` pada 100.000 listing, di bawah target `1.000 ms`.
+
+## Concurrency DEL-07 — 26 Oktober 2026
+
+- Dua proses PHP memakai koneksi PostgreSQL terpisah dan memberi final acceptance pada deal yang sama secara bersamaan.
+- Gerbang lulus hanya bila tepat dua acceptance, dua identity snapshot, dua reveal entitlement, dan satu audit `deal.revealed` tercatat.
+- Koneksi PostgreSQL dipaksa memakai timezone UTC agar `timestampTz` dan expiry PHP mempunyai instant yang sama.
+- Eksekusi terverifikasi: lulus. Deal berakhir `revealed`; benchmark search pada run yang sama mencatat p95 maksimum `428,61 ms`.

@@ -26,7 +26,8 @@
 - W/F/L memakai ambang Fair awal ±10%; perubahan admin prospektif dan diaudit.
 - PostgreSQL adalah database persisten; SQLite hanya untuk test disposable. Operasi tulis database persisten memerlukan instruksi eksplisit.
 - Windows Scheduled Task `FischTradeCenterScheduler` tetap memanggil `schedule:run`, tetapi aplikasi tidak lagi mendaftarkan job import value.
-- Expiry Fase 3 ditetapkan: proposal aktif 24 jam dan negotiation 7 hari. Scheduler mendaftarkan `trade:expire-phase-three` setiap menit; expiry pra-deal/reveal tetap terbuka.
+- Expiry ditetapkan: proposal aktif 24 jam, negotiation 7 hari, pra-deal 30 menit, dan reveal entitlement 30 hari. Scheduler mendaftarkan job Fase 3 dan Fase 4 setiap menit.
+- Environment `local`, `development`, `staging`, dan `testing` menyediakan `/admin/time-controls` khusus admin untuk memicu expiry pra-deal atau reveal entitlement secara manual. Semua trigger diaudit dan route tidak didaftarkan pada production.
 - Roadmap aktif memakai tujuh fase capability. Target MVP berakhir pada Fase 4 dengan wallet/fee nonaktif dan `fee = 0`; Fase 5 adalah monetisasi pasca-MVP, sedangkan Fase 6 adalah production readiness.
 - PRD utama berada di `docs/agents/prd/README.md`; manifest dokumentasi menjadi pintu masuk untuk urutan baca.
 
@@ -51,11 +52,21 @@
 - Lima migration pending dari `2026_10_25_000100` sampai `2026_10_26_000100` dijalankan pada database persisten sebagai batch 2 setelah otorisasi eksplisit. `migrate:status` memastikan semuanya berstatus `Ran`.
 - `PRODUCT.md` diselaraskan dengan roadmap Fase 0–6, CSV manual, kategori aktif, Rod non-tradable, thumbnail, dan batas MVP tanpa pembayaran.
 
+## Penutupan Fase 4
+
+- Route/UI deal telah terhubung dari server choice, persetujuan server, final acceptance ber-disclaimer, sampai reveal identity snapshot kedua pihak dengan `fee = 0`.
+- Finalisasi melakukan revalidasi proposal, pra-deal, listing, inventory, snapshot, serta feature flag wallet/fee dalam transaksi yang sama. Retry menghasilkan satu deal dan satu pasangan entitlement.
+- Identity lawan tetap tersembunyi sebelum final acceptance kedua pihak. Perubahan profil setelah reveal tidak mengubah identity snapshot historis.
+- `PhaseFourExpiryService` menangani expiry otomatis. Halaman admin non-production menangani expiry manual pra-deal dan reveal entitlement tanpa menghapus snapshot.
+- Konfigurasi koneksi PostgreSQL menetapkan timezone session `UTC`; ini mencegah timestamp tanpa offset dibaca sebagai waktu server Asia/Jakarta pada concurrency test.
+- Final acceptance bersamaan diuji dengan dua proses/koneksi PostgreSQL: tepat dua acceptance, satu finalisasi/reveal audit, dua identity snapshot, dan dua reveal entitlement.
+
 ## Verifikasi terakhir
 
-- `php artisan test` pada SQLite `:memory:`: 41 test, 358 assertion, lulus.
-- Vitest lulus 12/12; TypeScript strict typecheck lulus; Vite build lulus; Playwright desktop/mobile lulus 20/20 termasuk alur recommendation ke negotiation, akses operator ke trust operations, dan WCAG A/AA.
-- Test PostgreSQL disposable dengan dua proses/koneksi lulus: tepat 2 acceptance dan 2 audit event; proposal serta negotiation berakhir `accepted`. Benchmark ulang 100.000 listing mencatat p95 maksimum `501,11 ms`, di bawah target `1.000 ms`.
+- `php artisan test` pada SQLite `:memory:`: 46 test, 493 assertion, lulus.
+- Vitest lulus 14/14; TypeScript strict typecheck lulus; Vite build lulus; Playwright desktop/mobile lulus 22/22 termasuk deal/reveal dua participant, halaman time controls admin, dan WCAG A/AA.
+- Test PostgreSQL disposable dengan dua proses/koneksi lulus untuk acceptance proposal dan final acceptance deal. Deal concurrency menghasilkan status `revealed`, tepat 2 acceptance, 2 identity snapshot, 2 reveal entitlement, dan 1 audit reveal. Benchmark 100.000 listing mencatat p95 maksimum `428,61 ms`, di bawah target `1.000 ms`.
+- Lint design-taste pada halaman trade/time controls menghasilkan 0 fail dan 1 warning untuk penggunaan em-dash sebagai simbol nilai kosong/label.
 - Build lokal memakai Node 22.11.0 dan memberi warning karena Vite meminta 22.12+; build tetap berhasil. Asset `/images/trade-ocean-field.png` diselesaikan saat runtime.
 - Audit statis memetakan seluruh 69 requirement aktif tepat ke satu fase utama. Bukti diperiksa melalui route, controller/service, UI, migration, dan test; hasilnya dicatat di `development-phases.md`.
 - `composer validate --strict` menyatakan schema valid, dengan warning existing untuk exact constraint Laravel dan Inertia.
@@ -67,21 +78,21 @@
 - Fase 2 hampir selesai; route edit, invalidasi listing, rate limit mutation, dan kontrol homepage tertutup. INV-04 tidak aktif sampai ada aturan atribut kategori konkret.
 - Fase 3 selesai; recommendation dan negotiation telah terhubung end-to-end melalui HTTP/UI, participant authorization, history proposal, stale-version rejection, retry idempotent, invalidasi inventory/listing, redaction, scheduler expiry, dan test concurrency PostgreSQL dua koneksi.
 - Implementasi Fase 3 tersebut di-push ke `origin/main` sebagai commit `0d4a446` (`feat: connect phase three negotiation flow`).
-- Fase 4 parsial kuat: report participant, queue audit operator, update status report, suspend/lift, authorization, rate limit, dan blokir trade mutation untuk akun suspended sudah terhubung ke route/UI dan diuji. Deal/reveal masih belum diroute karena expiry pra-deal/reveal memerlukan persetujuan eksplisit.
+- Fase 4 selesai: deal/reveal, expiry otomatis, time controls admin non-production, report participant, queue audit operator, update status report, suspend/lift, authorization, rate limit, dan blokir trade mutation untuk akun suspended sudah terhubung ke route/UI serta diuji.
 - Fase 5 belum dimulai dan bukan gate MVP. Fase 6 belum siap karena keputusan recovery/retention, monitoring, runbook, rollout, dan re-verifikasi masih terbuka.
 
 ## Keputusan terbuka produk
 
 - Provider pembayaran konkret, metode pembayaran aktif, mata uang, minimum deposit, dan kebijakan fee/refund.
-- Expiry pra-deal/reveal Fase 4 serta retensi audit.
 - Kebijakan report, no-show, dispute, suspend, dan refund biaya layanan.
+- Retensi audit, proposal, dan identity snapshot.
 
 ## Next step
 
-1. Minta persetujuan eksplisit untuk expiry pra-deal 30 menit dan akses reveal 30 hari, lalu hubungkan route/UI deal.
-2. Tambahkan test atomic finalization, retry, concurrency PostgreSQL, dan larangan reveal prematur.
+1. Mulai hardening Fase 6: observability, backup/restore, RPO/RTO, retensi, dan runbook launch.
+2. Tutup kebijakan operasi report, no-show, suspension, appeal, dan retensi sebelum production launch.
 3. Migration persisten berikutnya tetap hanya boleh dijalankan setelah pengguna memberi instruksi eksplisit.
-4. Operator mengunduh template terkini sebelum setiap batch upload agar selalu membawa `item_key` stabil.
+4. Fase 5 tetap tidak dimulai sebelum keputusan provider, currency, fee, refund, dan reconciliation ditutup.
 
 ## Cara memperbarui memory
 

@@ -3,7 +3,7 @@
 | Item | Keterangan |
 |---|---|
 | Dokumen | PRD — Fisch Trade Center |
-| Versi | v1.5 (Expiry Fase 3) |
+| Versi | v1.6 (Expiry dan kontrol waktu Fase 4) |
 | Tanggal | 26 Oktober 2026 |
 | Disusun oleh | Product |
 | Audiens | Product Owner, Engineering, Design, QA, dan Operations |
@@ -224,6 +224,8 @@ Prioritas: `M` Must, `S` Should, `C` Could, dan `W` Won't untuk cakupan rilis sa
 | DEL-07 | **Retry dan final acceptance bersamaan bersifat idempotent.** Semua caller menerima hasil deal yang sama tanpa debit atau reveal tambahan. | M |
 | DEL-08 | **Sistem menyatakan jelas bahwa trade in-game tidak dijamin dan item tidak di-escrow.** Pernyataan tampil sebelum final acceptance. | M |
 
+Pra-deal kedaluwarsa 30 menit setelah pilihan server dibuat. Entitlement untuk melihat identity snapshot lawan berlaku 30 hari setelah deal `revealed`; berakhirnya entitlement tidak menghapus snapshot immutable. Scheduler memproses kedua batas ini. Pada environment `local`, `development`, `staging`, dan `testing`, administrator dapat memicu expiry pra-deal atau entitlement reveal secara manual dari halaman khusus yang diaudit. Route tersebut tidak didaftarkan pada production.
+
 ### 7.9 Wallet dan ledger
 
 | ID | Kebutuhan | Prioritas |
@@ -352,7 +354,7 @@ Ukuran conversion belum diberi target numerik sebelum baseline karena angka tanp
 | 1 | Payment provider, metode, mata uang, minimum/maksimum deposit, dan settlement mana yang digunakan? | Product Owner + Finance + Engineering | PAY-02 sampai PAY-05 dan aktivasi Fase 5 | Tinggi |
 | 2 | Berapa fee per pihak, kapan quote kedaluwarsa, serta kapan refund diberikan? | Product Owner + Finance | DEL-03 sampai DEL-05, WAL-02, kebijakan dispute | Tinggi |
 | 3 | ~~Berapa nilai awal `fair_threshold_percent` dan siapa yang menyetujui perubahannya?~~ | Tertutup 24 Oktober 2026: nilai awal ±10%; admin boleh mengubah secara prospektif dan setiap perubahan wajib diaudit. | REC-04 | Tinggi |
-| 4 | Berapa expiry listing, proposal, negotiation, pra-deal, dan identity reveal access? | Tertutup sebagian 26 Oktober 2026: listing = 14 hari, proposal = 24 jam, negotiation = 7 hari; expiry pra-deal dan identity reveal Fase 4 tetap terbuka. | NEG-06, DEL-03 | Sedang |
+| 4 | ~~Berapa expiry listing, proposal, negotiation, pra-deal, dan identity reveal access?~~ | Tertutup 26 Oktober 2026: listing = 14 hari, proposal = 24 jam, negotiation = 7 hari, pra-deal = 30 menit, dan identity reveal access = 30 hari. Environment non-production menyediakan trigger expiry manual khusus admin untuk pengujian; production tidak mendaftarkan route tersebut. | NEG-06, DEL-03 | Sedang |
 | 5 | Bagaimana report, no-show, scam allegation, suspend, dispute, refund, dan appeal ditangani? | Product Owner + Operations + Legal | ADM-04, ADM-05, production monetization | Tinggi |
 | 6 | ~~Bagaimana sumber katalog, value, metadata Rod, dan gambar diperbarui?~~ | Tertutup 25 Oktober 2026: admin mengunggah CSV partial-upsert ke staging dan memublikasikannya manual; Rod serta thumbnail dikelola terpisah di admin. Tidak ada fetch atau scheduler sumber eksternal. | CAT-03 sampai CAT-06 | Tinggi |
 | 7 | Berapa retensi audit, proposal, identity snapshot, payment event, dan data akun setelah penghapusan akun? | Product Owner + Legal + Security | AUD-02, privacy policy, production launch | Tinggi |

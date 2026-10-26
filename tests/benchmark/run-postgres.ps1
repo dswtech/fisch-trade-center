@@ -43,8 +43,13 @@ try {
 
     Set-Location $repositoryRoot
     php artisan migrate:fresh --force
+    if ($LASTEXITCODE -ne 0) { throw 'Disposable migration failed.' }
     php tests/benchmark/negotiation-concurrency.php
+    if ($LASTEXITCODE -ne 0) { throw 'Negotiation concurrency test failed.' }
+    php tests/benchmark/deal-concurrency.php
+    if ($LASTEXITCODE -ne 0) { throw 'Deal concurrency test failed.' }
     php tests/benchmark/search-matrix.php
+    if ($LASTEXITCODE -ne 0) { throw 'Search benchmark failed.' }
 }
 finally {
     if ($started) { Invoke-HiddenProcess $pgCtl @('-D', $clusterPath, '-m', 'fast', '-w', 'stop') }

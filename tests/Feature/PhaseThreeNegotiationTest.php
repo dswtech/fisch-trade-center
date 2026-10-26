@@ -3,7 +3,9 @@
 namespace Tests\Feature;
 
 use App\Domain\Trade\PhaseTwoExpiryService;
+use App\Domain\Trade\PhaseFourExpiryService;
 use App\Models\CatalogItem;
+use App\Models\Deal;
 use App\Models\InventoryEntry;
 use App\Models\Listing;
 use App\Models\Negotiation;
@@ -154,6 +156,134 @@ final class PhaseThreeNegotiationTest extends TestCase
         Artisan::call('schedule:list');
 
         self::assertStringContainsString('trade:expire-phase-three', Artisan::output());
+    }
+
+    public function test_participants_complete_zero_fee_deal_without_premature_identity_reveal(): void
+    {
+        $fixture = $this->fixture();
+        $negotiation = $this->acceptedNegotiation($fixture);
+
+        $this->actingAs($fixture['initiator'])->get('/negotiations/'.$negotiation->public_id)
+            ->assertInertia(fn (Assert $page) => $page->where('preDeal.status', 'awaiting_server_choice')->where('preDeal.serverType', null));
+        $this->actingAs($fixture['initiator'])->post('/negotiations/'.$negotiation->public_id.'/server-choice', ['serverType' => 'private_server'])->assertRedirect();
+        $preDeal = DB::table('pre_deal_versions')->where('negotiation_id', $negotiation->id)->sole();
+        self::assertEqualsWithDelta(30, now()->diffInMinutes($preDeal->expires_at), 1);
+
+        $this->actingAs($fixture['owner'])->post('/negotiations/'.$negotiation->public_id.'/server-accept', ['preDealId' => $preDeal->public_id])->assertRedirect();
+        $deal = Deal::query()->where('negotiation_id', $negotiation->id)->sole();
+        $this->actingAs($fixture['stranger'])->get('/deals/'.$deal->public_id)->assertNotFound();
+        $this->actingAs($fixture['initiator'])->post('/negotiations/'.$negotiation->public_id.'/final-accept', [])->assertSessionHasErrors('disclaimerAccepted');
+        $this->actingAs($fixture['initiator'])->post('/negotiations/'.$negotiation->public_id.'/final-accept', ['disclaimerAccepted' => '1'])->assertRedirect('/deals/'.$deal->public_id);
+        self::assertSame('awaiting_final_acceptance', $deal->fresh()->status);
+        self::assertDatabaseCount('deal_identity_snapshots', 0);
+        $this->actingAs($fixture['initiator'])->get('/deals/'.$deal->public_id)
+            ->assertInertia(fn (Assert $page) => $page->where('deal.serverType', 'private_server')->where('deal.snapshotVersion', 'phase-three-test')
+                ->where('deal.identity', null)->where('deal.finalAcceptedByMe', true));
+
+        $this->actingAs($fixture['owner'])->post('/negotiations/'.$negotiation->public_id.'/final-accept', ['disclaimerAccepted' => '1'])->assertRedirect('/deals/'.$deal->public_id);
+        self::assertSame('revealed', $deal->fresh()->status);
+        self::assertDatabaseCount('deal_acceptances', 2);
+        self::assertDatabaseCount('deal_identity_snapshots', 2);
+        self::assertDatabaseCount('reveal_entitlements', 2);
+        self::assertSame('matched', $fixture['listing']->fresh()->status);
+        self::assertStringNotContainsString('USN-', json_encode($deal->fresh()->snapshot, JSON_THROW_ON_ERROR));
+
+        $this->actingAs($fixture['initiator'])->get('/deals/'.$deal->public_id)
+            ->assertInertia(fn (Assert $page) => $page->where('deal.identity.usn', 'USN-'.$fixture['owner']->id)->where('deal.identity.ign', 'IGN-'.$fixture['owner']->id));
+        $this->actingAs($fixture['owner'])->get('/deals/'.$deal->public_id)
+            ->assertInertia(fn (Assert $page) => $page->where('deal.identity.usn', 'USN-'.$fixture['initiator']->id)->where('deal.identity.ign', 'IGN-'.$fixture['initiator']->id));
+
+        $this->actingAs($fixture['owner'])->post('/negotiations/'.$negotiation->public_id.'/final-accept', ['disclaimerAccepted' => '1'])->assertRedirect('/deals/'.$deal->public_id);
+        self::assertDatabaseCount('deal_acceptances', 2);
+        self::assertSame(1, DB::table('audit_events')->where('event_type', 'deal.revealed')->count());
+    }
+
+    public function test_failed_finalization_rolls_back_second_acceptance_and_reveal(): void
+    {
+        $fixture = $this->fixture();
+        [$negotiation, $deal] = $this->awaitingDeal($fixture);
+        $this->actingAs($fixture['initiator'])->post('/negotiations/'.$negotiation->public_id.'/final-accept', ['disclaimerAccepted' => '1'])->assertRedirect();
+        DB::table('player_profiles')->where('user_id', $fixture['owner']->id)->delete();
+
+        $this->actingAs($fixture['owner'])->post('/negotiations/'.$negotiation->public_id.'/final-accept', ['disclaimerAccepted' => '1'])->assertConflict();
+
+        self::assertSame('awaiting_final_acceptance', $deal->fresh()->status);
+        self::assertSame(1, DB::table('deal_acceptances')->where('deal_id', $deal->id)->count());
+        self::assertDatabaseCount('deal_identity_snapshots', 0);
+        self::assertDatabaseCount('reveal_entitlements', 0);
+    }
+
+    public function test_phase_four_expiry_and_admin_manual_time_controls_are_bounded_and_audited(): void
+    {
+        $fixture = $this->fixture();
+        [$negotiation, $deal] = $this->awaitingDeal($fixture);
+        $preDeal = DB::table('pre_deal_versions')->where('id', $deal->pre_deal_version_id)->first();
+        $admin = User::create(['name' => 'Time Admin', 'email' => 'time-admin@example.test', 'password' => 'password123', 'role' => 'admin', 'email_verified_at' => now()]);
+        $admin->forceFill(['email_verified_at' => now()])->save();
+
+        $this->actingAs($fixture['initiator'])->get('/admin/time-controls')->assertForbidden();
+        $this->actingAs($admin)->get('/admin/time-controls')->assertInertia(fn (Assert $page) => $page
+            ->component('admin-time-controls')->where('preDeals.0.id', $preDeal->public_id));
+        $this->actingAs($admin)->post('/admin/time-controls/pre-deals/'.$preDeal->public_id.'/expire')->assertRedirect();
+        self::assertSame('expired', DB::table('pre_deal_versions')->where('id', $preDeal->id)->value('status'));
+        self::assertSame('expired', $deal->fresh()->status);
+        self::assertDatabaseHas('audit_events', ['event_type' => 'pre_deal.manually_expired', 'actor_id' => $admin->id]);
+
+        Artisan::call('schedule:list');
+        self::assertStringContainsString('trade:expire-phase-four', Artisan::output());
+    }
+
+    public function test_admin_can_expire_reveal_access_without_deleting_identity_snapshot(): void
+    {
+        $fixture = $this->fixture();
+        [$negotiation, $deal] = $this->awaitingDeal($fixture);
+        $this->actingAs($fixture['initiator'])->post('/negotiations/'.$negotiation->public_id.'/final-accept', ['disclaimerAccepted' => '1'])->assertRedirect();
+        $this->actingAs($fixture['owner'])->post('/negotiations/'.$negotiation->public_id.'/final-accept', ['disclaimerAccepted' => '1'])->assertRedirect();
+        $admin = User::create(['name' => 'Reveal Admin', 'email' => 'reveal-admin@example.test', 'password' => 'password123', 'role' => 'admin', 'email_verified_at' => now()]);
+        $admin->forceFill(['email_verified_at' => now()])->save();
+
+        $this->actingAs($admin)->get('/admin/time-controls')->assertInertia(fn (Assert $page) => $page->where('reveals.0.id', $deal->public_id));
+        $this->actingAs($admin)->post('/admin/time-controls/deals/'.$deal->public_id.'/expire-reveal')->assertRedirect();
+
+        self::assertDatabaseCount('deal_identity_snapshots', 2);
+        self::assertFalse(DB::table('reveal_entitlements')->where('deal_id', $deal->id)->where('expires_at', '>', now())->exists());
+        $this->actingAs($fixture['initiator'])->get('/deals/'.$deal->public_id)
+            ->assertInertia(fn (Assert $page) => $page->where('deal.identity', null));
+        self::assertDatabaseHas('audit_events', ['event_type' => 'deal.reveal_manually_expired', 'actor_id' => $admin->id]);
+    }
+
+    public function test_phase_four_expiry_service_closes_elapsed_pre_deal_and_deal(): void
+    {
+        $fixture = $this->fixture();
+        [, $deal] = $this->awaitingDeal($fixture);
+        DB::table('pre_deal_versions')->where('id', $deal->pre_deal_version_id)->update(['expires_at' => now()->subMinute()]);
+        $deal->update(['expires_at' => now()->subMinute()]);
+
+        $result = app(PhaseFourExpiryService::class)->expire();
+
+        self::assertSame(['pre_deals' => 1, 'deals' => 1], $result);
+        self::assertSame('expired', DB::table('pre_deal_versions')->where('id', $deal->pre_deal_version_id)->value('status'));
+        self::assertSame('expired', $deal->fresh()->status);
+    }
+
+    private function awaitingDeal(array $fixture): array
+    {
+        $negotiation = $this->acceptedNegotiation($fixture);
+        $this->actingAs($fixture['initiator'])->post('/negotiations/'.$negotiation->public_id.'/server-choice', ['serverType' => 'public_server'])->assertRedirect();
+        $preDeal = DB::table('pre_deal_versions')->where('negotiation_id', $negotiation->id)->sole();
+        $this->actingAs($fixture['owner'])->post('/negotiations/'.$negotiation->public_id.'/server-accept', ['preDealId' => $preDeal->public_id])->assertRedirect();
+
+        return [$negotiation, Deal::query()->where('negotiation_id', $negotiation->id)->sole()];
+    }
+
+    private function acceptedNegotiation(array $fixture): Negotiation
+    {
+        $negotiation = $this->start($fixture);
+        $proposal = DB::table('proposal_versions')->where('negotiation_id', $negotiation->id)->sole();
+        $this->actingAs($fixture['initiator'])->post('/negotiations/'.$negotiation->public_id.'/accept', ['proposalId' => $proposal->public_id])->assertRedirect();
+        $this->actingAs($fixture['owner'])->post('/negotiations/'.$negotiation->public_id.'/accept', ['proposalId' => $proposal->public_id])->assertRedirect();
+
+        return $negotiation->fresh();
     }
 
     private function start(array $fixture): Negotiation
