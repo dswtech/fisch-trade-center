@@ -35,16 +35,18 @@ describe('phase three trade screens', () => {
         expect(html).toContain('name="items[0][inventoryEntryId]" value="entry-1"');
     });
 
-    it('keeps reporting hidden until phase four routes are available', () => {
+    it('posts a structured report through the phase four route', () => {
         const html = renderToStaticMarkup(<Trade
             section="negotiation"
-            reportingEnabled={false}
+            reportingEnabled={true}
             entries={[]}
             proposals={[]}
             negotiation={{ id: 'negotiation-1', alias: 'Trader-ABCD', status: 'proposed', expiresAt: '2026-10-27T00:00:00Z', activeProposal: null }}
         />);
 
         expect(html).toContain('/negotiations/negotiation-1/counter');
-        expect(html).not.toContain('/negotiations/negotiation-1/report');
+        expect(html).toContain('action="/reports"');
+        expect(html).toContain('name="targetId" value="negotiation-1"');
+        expect(html).toContain('name="reasonCode"');
     });
 });

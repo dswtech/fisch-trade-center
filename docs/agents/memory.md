@@ -53,8 +53,8 @@
 
 ## Verifikasi terakhir
 
-- `php artisan test` pada SQLite `:memory:`: 39 test, 330 assertion, lulus.
-- Vitest lulus 11/11; TypeScript strict typecheck lulus; Vite build lulus; Playwright desktop/mobile lulus 18/18 termasuk alur recommendation ke negotiation dan WCAG A/AA.
+- `php artisan test` pada SQLite `:memory:`: 41 test, 358 assertion, lulus.
+- Vitest lulus 12/12; TypeScript strict typecheck lulus; Vite build lulus; Playwright desktop/mobile lulus 20/20 termasuk alur recommendation ke negotiation, akses operator ke trust operations, dan WCAG A/AA.
 - Test PostgreSQL disposable dengan dua proses/koneksi lulus: tepat 2 acceptance dan 2 audit event; proposal serta negotiation berakhir `accepted`. Benchmark ulang 100.000 listing mencatat p95 maksimum `501,11 ms`, di bawah target `1.000 ms`.
 - Build lokal memakai Node 22.11.0 dan memberi warning karena Vite meminta 22.12+; build tetap berhasil. Asset `/images/trade-ocean-field.png` diselesaikan saat runtime.
 - Audit statis memetakan seluruh 69 requirement aktif tepat ke satu fase utama. Bukti diperiksa melalui route, controller/service, UI, migration, dan test; hasilnya dicatat di `development-phases.md`.
@@ -67,7 +67,7 @@
 - Fase 2 hampir selesai; route edit, invalidasi listing, rate limit mutation, dan kontrol homepage tertutup. INV-04 tidak aktif sampai ada aturan atribut kategori konkret.
 - Fase 3 selesai; recommendation dan negotiation telah terhubung end-to-end melalui HTTP/UI, participant authorization, history proposal, stale-version rejection, retry idempotent, invalidasi inventory/listing, redaction, scheduler expiry, dan test concurrency PostgreSQL dua koneksi.
 - Implementasi Fase 3 tersebut di-push ke `origin/main` sebagai commit `0d4a446` (`feat: connect phase three negotiation flow`).
-- Fase 4 baru fondasi; deal dan trust-operation controller belum terhubung ke route/UI/middleware serta belum memiliki test atomicity, concurrency, dan privacy reveal.
+- Fase 4 parsial kuat: report participant, queue audit operator, update status report, suspend/lift, authorization, rate limit, dan blokir trade mutation untuk akun suspended sudah terhubung ke route/UI dan diuji. Deal/reveal masih belum diroute karena expiry pra-deal/reveal memerlukan persetujuan eksplisit.
 - Fase 5 belum dimulai dan bukan gate MVP. Fase 6 belum siap karena keputusan recovery/retention, monitoring, runbook, rollout, dan re-verifikasi masih terbuka.
 
 ## Keputusan terbuka produk
@@ -78,8 +78,8 @@
 
 ## Next step
 
-1. Hubungkan route/UI Fase 4 serta minimum trust operations; expiry pra-deal/reveal tetap memerlukan keputusan produk.
-2. Tambahkan test atomic finalization, retry, concurrency, dan larangan reveal prematur.
+1. Minta persetujuan eksplisit untuk expiry pra-deal 30 menit dan akses reveal 30 hari, lalu hubungkan route/UI deal.
+2. Tambahkan test atomic finalization, retry, concurrency PostgreSQL, dan larangan reveal prematur.
 3. Migration persisten berikutnya tetap hanya boleh dijalankan setelah pengguna memberi instruksi eksplisit.
 4. Operator mengunduh template terkini sebelum setiap batch upload agar selalu membawa `item_key` stabil.
 

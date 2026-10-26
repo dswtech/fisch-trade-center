@@ -15,6 +15,9 @@ use App\Http\Controllers\PhaseOnePageController;
 use App\Http\Controllers\PhaseThreePageController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\NegotiationController;
+use App\Http\Controllers\OperatorAuditController;
+use App\Http\Controllers\ReportController;
+use App\Http\Controllers\SuspensionController;
 use Illuminate\Foundation\Auth\EmailVerificationRequest;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -53,7 +56,8 @@ Route::middleware('auth')->group(function (): void {
         Route::get('/recommendations/{listing}', [PhaseThreePageController::class, 'recommendations'])->name('recommendations.show');
         Route::get('/negotiations', [PhaseThreePageController::class, 'index'])->name('negotiations.index');
         Route::get('/negotiations/{negotiation}', [PhaseThreePageController::class, 'show'])->name('negotiations.show');
-        Route::middleware('throttle:60,1')->group(function (): void {
+        Route::post('/reports', [ReportController::class, 'store'])->middleware('throttle:20,1')->name('reports.store');
+        Route::middleware(['throttle:60,1', 'not-suspended'])->group(function (): void {
             Route::post('/inventory', [InventoryController::class, 'store'])->name('inventory.store');
             Route::patch('/inventory/{entry}', [InventoryController::class, 'update'])->name('inventory.update');
             Route::delete('/inventory/{entry}', [InventoryController::class, 'destroy'])->name('inventory.destroy');
@@ -65,6 +69,14 @@ Route::middleware('auth')->group(function (): void {
             Route::post('/negotiations/{negotiation}/accept', [NegotiationController::class, 'accept'])->name('negotiations.accept');
             Route::post('/negotiations/{negotiation}/reject', [NegotiationController::class, 'reject'])->name('negotiations.reject');
             Route::post('/negotiations/{negotiation}/cancel', [NegotiationController::class, 'cancel'])->name('negotiations.cancel');
+        });
+        Route::middleware('operator')->prefix('operator')->name('operator.')->group(function (): void {
+            Route::get('/audit', OperatorAuditController::class)->name('audit');
+            Route::middleware('throttle:60,1')->group(function (): void {
+                Route::patch('/reports/{report}', [ReportController::class, 'update'])->name('reports.update');
+                Route::post('/suspensions', [SuspensionController::class, 'store'])->name('suspensions.store');
+                Route::delete('/suspensions/{suspension}', [SuspensionController::class, 'destroy'])->name('suspensions.destroy');
+            });
         });
         Route::middleware('admin')->prefix('admin')->name('admin.')->group(function (): void {
             Route::get('/', [AdminController::class, 'index'])->name('index');

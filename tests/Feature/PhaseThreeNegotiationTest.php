@@ -48,7 +48,7 @@ final class PhaseThreeNegotiationTest extends TestCase
 
         $this->actingAs($fixture['stranger'])->get('/negotiations/'.$negotiation->public_id)->assertNotFound();
         $this->actingAs($fixture['owner'])->get('/negotiations/'.$negotiation->public_id)
-            ->assertOk()->assertInertia(fn (Assert $page) => $page->component('trade')->where('section', 'negotiation')->where('reportingEnabled', false));
+            ->assertOk()->assertInertia(fn (Assert $page) => $page->component('trade')->where('section', 'negotiation')->where('reportingEnabled', true));
     }
 
     public function test_counter_replaces_one_side_and_stale_acceptance_is_rejected(): void
@@ -105,6 +105,20 @@ final class PhaseThreeNegotiationTest extends TestCase
         $second = $this->start($fixture);
         $this->actingAs($fixture['owner'])->delete('/listings/'.$fixture['listing']->public_id)->assertRedirect();
         self::assertSame('invalidated', $second->fresh()->status);
+    }
+
+    public function test_participant_can_submit_one_structured_report_per_reason(): void
+    {
+        $fixture = $this->fixture();
+        $negotiation = $this->start($fixture);
+        $payload = ['targetType' => 'negotiation', 'targetId' => $negotiation->public_id, 'reasonCode' => 'suspected_scam'];
+
+        $this->actingAs($fixture['initiator'])->post('/reports', $payload)->assertRedirect();
+        $this->actingAs($fixture['initiator'])->post('/reports', $payload)->assertRedirect();
+
+        self::assertDatabaseCount('reports', 1);
+        self::assertDatabaseHas('reports', ['reporter_id' => $fixture['initiator']->id, 'target_public_id' => $negotiation->public_id, 'reason_code' => 'suspected_scam']);
+        self::assertSame(1, DB::table('audit_events')->where('event_type', 'report.created')->count());
     }
 
     public function test_expiry_service_closes_stale_phase_three_records(): void

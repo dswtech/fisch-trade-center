@@ -1,5 +1,5 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
-import { Anchor, ArrowRight, BookOpen, Boxes, Compass, Filter, Fish, LayoutDashboard, Menu, Moon, Search, ShipWheel, SlidersHorizontal, Sparkles, Sun, UserRound, X } from 'lucide-react';
+import { Anchor, ArrowRight, BookOpen, Boxes, Compass, Filter, Fish, LayoutDashboard, Menu, Moon, Search, ShieldCheck, ShipWheel, SlidersHorizontal, Sparkles, Sun, UserRound, X } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { retryableMutation } from '../lib/network-recovery';
 import { hasInvertedValueRange } from '../lib/search';
@@ -121,7 +121,7 @@ export default function Discovery({
         </header>
         <aside className={`sidebar ${drawer ? 'open' : ''}`}>
             <button className="icon-button close-drawer" onClick={() => setDrawer(false)} aria-label="Close menu"><X/></button>
-            <nav>{[[LayoutDashboard, t.dashboard, '/'], [Compass, t.discover, '/'], [BookOpen, t.catalog, '/catalog'], [Boxes, t.inventory, '/inventory'], [Fish, t.listings, '/listings'], [ShipWheel, t.simulator, '/simulator']].map(([Icon, label, href]: any) => <Link key={label} href={href} className={label === t.discover ? 'active' : ''}><Icon/><span>{label}</span></Link>)}</nav>
+            <nav>{[[LayoutDashboard, t.dashboard, '/'], [Compass, t.discover, '/'], [BookOpen, t.catalog, '/catalog'], [Boxes, t.inventory, '/inventory'], [Fish, t.listings, '/listings'], [ShipWheel, t.simulator, '/simulator'], ...(props.auth?.user&&['operator','admin'].includes(props.auth.user.role)?[[ShieldCheck, 'Trust operations', '/operator/audit']]:[])].map(([Icon, label, href]: any) => <Link key={label} href={href} className={label === t.discover ? 'active' : ''}><Icon/><span>{label}</span></Link>)}</nav>
             <img className="sidebar-art" src="/images/sidebar-ocean-art.png" alt=""/>
             <Link className="sidebar-profile" href={props.auth?.user ? '/profile' : '/login'}><span className="avatar"><UserRound/></span><span>{props.auth?.user?.name || 'Guest angler'}<small>{props.auth?.user ? 'Player' : 'Sign in to trade'}</small></span></Link>
         </aside>

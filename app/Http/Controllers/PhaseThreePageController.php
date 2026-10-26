@@ -7,6 +7,7 @@ use App\Domain\Trade\WflCalculator;
 use App\Models\Listing;
 use App\Models\Negotiation;
 use App\Models\ProposalVersion;
+use App\Models\Report;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
@@ -75,7 +76,10 @@ final class PhaseThreePageController extends Controller
             'entries' => DB::table('inventory_entries')->join('catalog_items', 'catalog_items.id', '=', 'inventory_entries.catalog_item_id')
                 ->where('inventory_entries.user_id', $request->user()->id)->whereNull('inventory_entries.archived_at')->where('inventory_entries.quantity', '>', 0)
                 ->orderBy('catalog_items.canonical_name')->get(['inventory_entries.public_id as id', 'catalog_items.canonical_name as name', 'inventory_entries.quantity']),
-            'reportingEnabled' => false,
+            'reports' => Report::query()->where('reporter_id', $request->user()->id)->where('target_type', 'negotiation')
+                ->where('target_public_id', $negotiation->public_id)->latest('id')->get()
+                ->map(fn (Report $report): array => ['id' => $report->public_id, 'reason' => $report->reason_code, 'status' => $report->status, 'createdAt' => $report->created_at->toIso8601String()]),
+            'reportingEnabled' => true,
         ]);
     }
 

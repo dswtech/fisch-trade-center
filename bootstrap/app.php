@@ -13,7 +13,11 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->web(append: [\App\Http\Middleware\HandleInertiaRequests::class, \App\Http\Middleware\IdempotentMutation::class]);
-        $middleware->alias(['admin' => \App\Http\Middleware\RequireAdmin::class]);
+        $middleware->alias([
+            'admin' => \App\Http\Middleware\RequireAdmin::class,
+            'operator' => \App\Http\Middleware\RequireOperator::class,
+            'not-suspended' => \App\Http\Middleware\RejectSuspendedMutation::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(

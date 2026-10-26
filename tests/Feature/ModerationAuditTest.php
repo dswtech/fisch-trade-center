@@ -8,6 +8,7 @@ use App\Domain\Moderation\SuspensionService;
 use App\Http\Middleware\RejectSuspendedMutation;
 use App\Http\Middleware\RequireOperator;
 use App\Models\CatalogItem;
+use App\Models\Report;
 use App\Models\Suspension;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -16,6 +17,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Symfony\Component\HttpFoundation\Response;
 use Tests\TestCase;
+use Inertia\Testing\AssertableInertia as Assert;
 
 final class ModerationAuditTest extends TestCase
 {
@@ -100,6 +102,36 @@ final class ModerationAuditTest extends TestCase
 
         $this->expectException(\Symfony\Component\HttpKernel\Exception\HttpException::class);
         $service->update($first->fresh(), $admin, true, ['deep']);
+    }
+
+    public function test_operator_routes_manage_reports_and_suspensions_while_players_are_forbidden(): void
+    {
+        $operator = $this->user('route-operator@example.test', 'operator');
+        $reporter = $this->user('route-reporter@example.test');
+        $target = $this->user('route-target@example.test');
+        $report = Report::create([
+            'reporter_id' => $reporter->id, 'target_type' => 'user', 'target_public_id' => $target->public_id,
+            'reason_code' => 'suspected_scam', 'status' => 'open',
+        ]);
+
+        $this->actingAs($reporter)->get('/operator/audit')->assertForbidden();
+        $this->actingAs($operator)->get('/operator/audit')->assertOk()->assertInertia(fn (Assert $page) => $page
+            ->component('operator-audit')->has('reports', 1)->where('reports.0.targets.0.id', $target->public_id));
+        $this->actingAs($operator)->patch('/operator/reports/'.$report->public_id, ['status' => 'reviewing'])->assertRedirect();
+        self::assertSame('reviewing', $report->fresh()->status);
+
+        $this->actingAs($operator)->post('/operator/suspensions', [
+            'userId' => $target->public_id, 'reasonCode' => 'suspected_scam', 'duration' => '7',
+        ])->assertRedirect();
+        $suspension = Suspension::query()->where('user_id', $target->id)->sole();
+        $this->actingAs($target)->post('/negotiations', [])->assertStatus(423);
+        $this->actingAs($target)->post('/reports', [
+            'targetType' => 'user', 'targetId' => $reporter->public_id, 'reasonCode' => 'other',
+        ])->assertRedirect();
+
+        $this->actingAs($operator)->delete('/operator/suspensions/'.$suspension->public_id)->assertRedirect();
+        self::assertNotNull($suspension->fresh()->lifted_at);
+        $this->actingAs($target)->post('/negotiations', [])->assertSessionHasErrors(['listingId']);
     }
 
     private function user(string $email, string $role = 'player'): User

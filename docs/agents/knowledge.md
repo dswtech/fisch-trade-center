@@ -93,6 +93,7 @@ Setelah final deal berhasil, kedua pihak boleh melihat USN dan IGN satu sama lai
 - Counteroffer mengganti sisi milik actor dan membawa sisi lawan dari proposal aktif. Versi lama menjadi `superseded` dan tetap tersedia sebagai history.
 - Perubahan inventory yang dipakai proposal atau perubahan/cancel listing mengubah negotiation dan proposal aktif menjadi `invalidated`.
 - Proposal aktif kedaluwarsa setelah 24 jam dan negotiation setelah 7 hari. Scheduler `trade:expire-phase-three` berjalan setiap menit dan tidak menerapkan expiry pra-deal/deal sebelum kebijakan Fase 4 diputuskan.
+- Participant dapat mengirim report reason-code terstruktur dari negotiation. Operator/admin mempunyai queue trust operations untuk review report dan suspend/lift akun; suspension menolak mutation trade baru tetapi tidak memblokir report atau logout.
 
 ### Deal
 

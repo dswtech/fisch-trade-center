@@ -81,3 +81,18 @@ test('failed profile mutation preserves private input and retries manually',asyn
   await expect(page.getByLabel(/Roblox username/)).toHaveValue('RetryPrivateUSN');
   expect(attempts).toBe(2);
 });
+
+test('administrator reaches the trust operations queue',async({page})=>{
+  await page.context().clearCookies();
+  await page.goto('/login');
+  await page.getByLabel('Email').fill('sysadmin@ftc.test');
+  await page.getByLabel('Password').fill('Sysadmin123!');
+  await page.getByRole('button',{name:'Login'}).click();
+  if ((page.viewportSize()?.width ?? 0) < 768) {
+    await page.getByRole('button',{name:'Open menu'}).click();
+  }
+  await page.getByRole('link',{name:'Trust operations'}).click();
+  await expect(page).toHaveURL('/operator/audit');
+  await expect(page.getByRole('heading',{name:'Trust operations'})).toBeVisible();
+  await expect(page.getByText('No structured reports have been submitted.')).toBeVisible();
+});
