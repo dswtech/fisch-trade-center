@@ -111,14 +111,35 @@ final class PhaseThreeNegotiationTest extends TestCase
     {
         $fixture = $this->fixture();
         $negotiation = $this->start($fixture);
-        DB::table('proposal_versions')->where('negotiation_id', $negotiation->id)->update(['expires_at' => now()->subMinute()]);
+        $proposal = DB::table('proposal_versions')->where('negotiation_id', $negotiation->id)->first();
+        DB::table('proposal_versions')->where('id', $proposal->id)->update(['expires_at' => now()->subMinute()]);
         $negotiation->update(['expires_at' => now()->subMinute()]);
+
+        $preDealId = DB::table('pre_deal_versions')->insertGetId([
+            'public_id' => (string) Str::uuid(), 'negotiation_id' => $negotiation->id, 'proposal_version_id' => $proposal->id,
+            'proposer_id' => $fixture['initiator']->id, 'version' => 1, 'server_type' => 'public_server', 'status' => 'active',
+            'fee_quote' => 0, 'expires_at' => now()->subMinute(), 'created_at' => now(), 'updated_at' => now(),
+        ]);
+        $dealId = DB::table('deals')->insertGetId([
+            'public_id' => (string) Str::uuid(), 'negotiation_id' => $negotiation->id, 'proposal_version_id' => $proposal->id,
+            'pre_deal_version_id' => $preDealId, 'status' => 'awaiting_final_acceptance', 'fee_quote' => 0,
+            'expires_at' => now()->subMinute(), 'created_at' => now(), 'updated_at' => now(),
+        ]);
 
         $result = (new PhaseTwoExpiryService)->expire();
 
         self::assertSame(1, $result['proposals']);
         self::assertSame(1, $result['negotiations']);
         self::assertSame('expired', $negotiation->fresh()->status);
+        self::assertSame('active', DB::table('pre_deal_versions')->where('id', $preDealId)->value('status'));
+        self::assertSame('awaiting_final_acceptance', DB::table('deals')->where('id', $dealId)->value('status'));
+    }
+
+    public function test_phase_three_expiry_is_registered_with_the_scheduler(): void
+    {
+        Artisan::call('schedule:list');
+
+        self::assertStringContainsString('trade:expire-phase-three', Artisan::output());
     }
 
     private function start(array $fixture): Negotiation

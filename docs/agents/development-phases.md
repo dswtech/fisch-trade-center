@@ -19,7 +19,7 @@ Target MVP mencakup Fase 0–4 dengan wallet dan fee nonaktif serta `fee = 0`. F
 | 0 — Fondasi & Security Baseline | ACC-01–ACC-06 | Tidak ada | Hampir selesai |
 | 1 — Catalog Data & Admin | CAT-01–CAT-06, AUD-04, ADM-01, ADM-03 | Fase 0 | Hampir selesai |
 | 2 — Player Trade Core | INV-01–INV-04, LST-01–LST-06, SRC-01–SRC-05 | Fase 0–1 | Hampir selesai |
-| 3 — Recommendation & Negotiation | REC-01–REC-06, NEG-01–NEG-07 | Fase 0–2 | Hampir selesai |
+| 3 — Recommendation & Negotiation | REC-01–REC-06, NEG-01–NEG-07 | Fase 0–2 | Selesai |
 | 4 — Pre-deal, Reveal & Trust Operations | NEG-08, DEL-01–DEL-08, AUD-01–AUD-03, ADM-02, ADM-04–ADM-05 | Fase 0–3 | Fondasi saja |
 | 5 — Wallet, Payment & Dispute Finansial | WAL-01–WAL-06, PAY-01–PAY-05 | Fase 0–4 dan keputusan produk pembayaran | Belum dimulai; bukan gate MVP |
 | 6 — Production Readiness & Launch | Seluruh NFR dan gerbang operasional | Fase 0–4 untuk MVP; Fase 5 untuk monetisasi | Belum siap |
@@ -74,11 +74,7 @@ Pemetaan di atas menempatkan seluruh 69 requirement aktif tepat pada satu fase u
 
 **Bukti:** listing discovery membuka recommendation nyata dari inventory pengguna; route HTTP mendukung start, counter, accept, reject, cancel, index, dan detail negotiation; alias anonim serta authorization peserta diterapkan. Counteroffer mempertahankan history, stale acceptance menghasilkan konflik, dan mutation inventory/listing menginvalidasi proposal aktif dalam transaksi yang sama. Feature, component, dan E2E test mencakup alur utama serta redaction identitas.
 
-**Gap dan blocker:**
-
-- `PhaseTwoExpiryService` telah diuji, tetapi belum dijadwalkan karena durasi expiry proposal dan negotiation masih keputusan produk terbuka.
-- Retry acceptance telah diuji idempotent dan final accept memakai row lock, tetapi test balapan dengan dua koneksi database belum tersedia.
-- Benchmark PostgreSQL khusus recommendation belum dijalankan; benchmark search Fase 2 tidak membuktikan biaya beam search recommendation.
+**Gap dan blocker:** gerbang capability tertutup pada 26 Oktober 2026. Proposal aktif kedaluwarsa setelah 24 jam dan negotiation setelah 7 hari; job `trade:expire-phase-three` berjalan setiap menit melalui scheduler yang sudah dipanggil Windows Scheduled Task. Test memastikan job hanya menutup state Fase 3 sehingga keputusan expiry Fase 4 tidak diterapkan diam-diam. Test PostgreSQL disposable memakai dua proses/koneksi yang menerima proposal sama secara bersamaan dan membuktikan tepat dua acceptance serta audit event, dengan status akhir proposal/negotiation `accepted`. Pengukuran biaya recommendation skala besar dipindahkan ke hardening performa Fase 6 karena PRD tidak menetapkan target terpisah untuk beam search.
 
 **Gerbang keluar:** seluruh action memiliki route dan policy, UI memakai data nyata, satu proposal version aktif dijaga secara atomik, versi basi selalu ditolak, perubahan inventory/listing menginvalidasi proposal terkait, dan expiry berjalan serta diuji.
 
@@ -119,10 +115,9 @@ Pemetaan di atas menempatkan seluruh 69 requirement aktif tepat pada satu fase u
 
 ## Urutan backlog
 
-1. Putuskan expiry proposal/negotiation, aktifkan schedule expiry, lalu tambahkan test balapan PostgreSQL untuk menutup gerbang Fase 3.
-2. Hubungkan Pre-deal, Reveal, dan minimum trust operations dengan privacy/concurrency test.
-3. Verifikasi ulang seluruh Fase 0–4 setelah jalur deal aktif.
-4. Selesaikan production hardening dan rollout MVP Fase 0–4.
-5. Mulai Wallet & Payment hanya setelah seluruh keputusan produk Fase 5 ditutup.
+1. Hubungkan Pre-deal, Reveal, dan minimum trust operations dengan privacy/concurrency test.
+2. Verifikasi ulang seluruh Fase 0–4 setelah jalur deal aktif.
+3. Selesaikan production hardening dan rollout MVP Fase 0–4.
+4. Mulai Wallet & Payment hanya setelah seluruh keputusan produk Fase 5 ditutup.
 
 Status fase wajib diperbarui berdasarkan bukti baru. Sebuah fase tidak boleh dinaikkan menjadi selesai hanya karena schema, service, atau UI statis sudah tersedia.

@@ -3,8 +3,8 @@
 | Item | Keterangan |
 |---|---|
 | Dokumen | PRD — Fisch Trade Center |
-| Versi | v1.4 (Roadmap capability 0–6) |
-| Tanggal | 25 Oktober 2026 |
+| Versi | v1.5 (Expiry Fase 3) |
+| Tanggal | 26 Oktober 2026 |
 | Disusun oleh | Product |
 | Audiens | Product Owner, Engineering, Design, QA, dan Operations |
 | Status | Target MVP Fase 0–4; monetisasi Fase 5 tetap tertahan keputusan produk |
@@ -352,7 +352,7 @@ Ukuran conversion belum diberi target numerik sebelum baseline karena angka tanp
 | 1 | Payment provider, metode, mata uang, minimum/maksimum deposit, dan settlement mana yang digunakan? | Product Owner + Finance + Engineering | PAY-02 sampai PAY-05 dan aktivasi Fase 5 | Tinggi |
 | 2 | Berapa fee per pihak, kapan quote kedaluwarsa, serta kapan refund diberikan? | Product Owner + Finance | DEL-03 sampai DEL-05, WAL-02, kebijakan dispute | Tinggi |
 | 3 | ~~Berapa nilai awal `fair_threshold_percent` dan siapa yang menyetujui perubahannya?~~ | Tertutup 24 Oktober 2026: nilai awal ±10%; admin boleh mengubah secara prospektif dan setiap perubahan wajib diaudit. | REC-04 | Tinggi |
-| 4 | Berapa expiry listing, proposal, negotiation, pra-deal, dan identity reveal access? | Tertutup sebagian 24 Oktober 2026: listing MVP = 14 hari; expiry Fase 3–4 tetap terbuka. | NEG-06, DEL-03 | Sedang |
+| 4 | Berapa expiry listing, proposal, negotiation, pra-deal, dan identity reveal access? | Tertutup sebagian 26 Oktober 2026: listing = 14 hari, proposal = 24 jam, negotiation = 7 hari; expiry pra-deal dan identity reveal Fase 4 tetap terbuka. | NEG-06, DEL-03 | Sedang |
 | 5 | Bagaimana report, no-show, scam allegation, suspend, dispute, refund, dan appeal ditangani? | Product Owner + Operations + Legal | ADM-04, ADM-05, production monetization | Tinggi |
 | 6 | ~~Bagaimana sumber katalog, value, metadata Rod, dan gambar diperbarui?~~ | Tertutup 25 Oktober 2026: admin mengunggah CSV partial-upsert ke staging dan memublikasikannya manual; Rod serta thumbnail dikelola terpisah di admin. Tidak ada fetch atau scheduler sumber eksternal. | CAT-03 sampai CAT-06 | Tinggi |
 | 7 | Berapa retensi audit, proposal, identity snapshot, payment event, dan data akun setelah penghapusan akun? | Product Owner + Legal + Security | AUD-02, privacy policy, production launch | Tinggi |

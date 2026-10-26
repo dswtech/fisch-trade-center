@@ -43,6 +43,7 @@ try {
 
     Set-Location $repositoryRoot
     php artisan migrate:fresh --force
+    php tests/benchmark/negotiation-concurrency.php
     php tests/benchmark/search-matrix.php
 }
 finally {

@@ -26,6 +26,7 @@
 - W/F/L memakai ambang Fair awal ±10%; perubahan admin prospektif dan diaudit.
 - PostgreSQL adalah database persisten; SQLite hanya untuk test disposable. Operasi tulis database persisten memerlukan instruksi eksplisit.
 - Windows Scheduled Task `FischTradeCenterScheduler` tetap memanggil `schedule:run`, tetapi aplikasi tidak lagi mendaftarkan job import value.
+- Expiry Fase 3 ditetapkan: proposal aktif 24 jam dan negotiation 7 hari. Scheduler mendaftarkan `trade:expire-phase-three` setiap menit; expiry pra-deal/reveal tetap terbuka.
 - Roadmap aktif memakai tujuh fase capability. Target MVP berakhir pada Fase 4 dengan wallet/fee nonaktif dan `fee = 0`; Fase 5 adalah monetisasi pasca-MVP, sedangkan Fase 6 adalah production readiness.
 - PRD utama berada di `docs/agents/prd/README.md`; manifest dokumentasi menjadi pintu masuk untuk urutan baca.
 
@@ -52,8 +53,9 @@
 
 ## Verifikasi terakhir
 
-- `php artisan test` pada SQLite `:memory:`: 38 test, 327 assertion, lulus.
+- `php artisan test` pada SQLite `:memory:`: 39 test, 330 assertion, lulus.
 - Vitest lulus 11/11; TypeScript strict typecheck lulus; Vite build lulus; Playwright desktop/mobile lulus 18/18 termasuk alur recommendation ke negotiation dan WCAG A/AA.
+- Test PostgreSQL disposable dengan dua proses/koneksi lulus: tepat 2 acceptance dan 2 audit event; proposal serta negotiation berakhir `accepted`. Benchmark ulang 100.000 listing mencatat p95 maksimum `501,11 ms`, di bawah target `1.000 ms`.
 - Build lokal memakai Node 22.11.0 dan memberi warning karena Vite meminta 22.12+; build tetap berhasil. Asset `/images/trade-ocean-field.png` diselesaikan saat runtime.
 - Audit statis memetakan seluruh 69 requirement aktif tepat ke satu fase utama. Bukti diperiksa melalui route, controller/service, UI, migration, dan test; hasilnya dicatat di `development-phases.md`.
 - `composer validate --strict` menyatakan schema valid, dengan warning existing untuk exact constraint Laravel dan Inertia.
@@ -63,7 +65,7 @@
 - Fase 0 hampir selesai; gap rate limit mutation tertutup dan checkpoint Fase 0–2 sudah di-push ke `main` sebagai commit `1c47c70`.
 - Fase 1 hampir selesai; gap route/UI status-alias, lifecycle Rod, pembuktian rollback publish, dan rollout migration persisten tertutup.
 - Fase 2 hampir selesai; route edit, invalidasi listing, rate limit mutation, dan kontrol homepage tertutup. INV-04 tidak aktif sampai ada aturan atribut kategori konkret.
-- Fase 3 hampir selesai; recommendation dan negotiation telah terhubung end-to-end melalui HTTP/UI, participant authorization, history proposal, stale-version rejection, retry idempotent, invalidasi inventory/listing, redaction, dan test expiry. Sisa gerbang adalah keputusan durasi serta schedule expiry, test balapan PostgreSQL dua koneksi, dan benchmark recommendation.
+- Fase 3 selesai; recommendation dan negotiation telah terhubung end-to-end melalui HTTP/UI, participant authorization, history proposal, stale-version rejection, retry idempotent, invalidasi inventory/listing, redaction, scheduler expiry, dan test concurrency PostgreSQL dua koneksi.
 - Implementasi Fase 3 tersebut di-push ke `origin/main` sebagai commit `0d4a446` (`feat: connect phase three negotiation flow`).
 - Fase 4 baru fondasi; deal dan trust-operation controller belum terhubung ke route/UI/middleware serta belum memiliki test atomicity, concurrency, dan privacy reveal.
 - Fase 5 belum dimulai dan bukan gate MVP. Fase 6 belum siap karena keputusan recovery/retention, monitoring, runbook, rollout, dan re-verifikasi masih terbuka.
@@ -71,13 +73,13 @@
 ## Keputusan terbuka produk
 
 - Provider pembayaran konkret, metode pembayaran aktif, mata uang, minimum deposit, dan kebijakan fee/refund.
-- Expiry proposal/negotiation Fase 3, expiry pra-deal/reveal Fase 4, serta retensi audit.
+- Expiry pra-deal/reveal Fase 4 serta retensi audit.
 - Kebijakan report, no-show, dispute, suspend, dan refund biaya layanan.
 
 ## Next step
 
-1. Putuskan expiry proposal/negotiation, aktifkan schedule, dan jalankan test concurrency/benchmark PostgreSQL untuk menutup Fase 3.
-2. Hubungkan Fase 4 setelah kebijakan expiry minimum tersedia.
+1. Hubungkan route/UI Fase 4 serta minimum trust operations; expiry pra-deal/reveal tetap memerlukan keputusan produk.
+2. Tambahkan test atomic finalization, retry, concurrency, dan larangan reveal prematur.
 3. Migration persisten berikutnya tetap hanya boleh dijalankan setelah pengguna memberi instruksi eksplisit.
 4. Operator mengunduh template terkini sebelum setiap batch upload agar selalu membawa `item_key` stabil.
 

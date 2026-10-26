@@ -42,6 +42,7 @@ Produk bukan sekadar papan listing: setiap hasil penilaian dan listing yang bern
 - Email wajib terverifikasi sebelum inventory, listing, atau simulator privat.
 - `fair_threshold_percent` awal adalah `10`; perubahan admin berlaku prospektif dan diaudit.
 - Listing aktif kedaluwarsa setelah 14 hari.
+- Proposal aktif kedaluwarsa setelah 24 jam dan negotiation setelah 7 hari. Scheduler Fase 3 menutup state tersebut tanpa menghapus riwayat.
 - Katalog/value berasal dari CSV UTF-8 yang diunggah admin. Upload hanya membuat staging; publish manual melakukan partial upsert dan membuat snapshot immutable secara atomik.
 - Perubahan value di atas 25% menghasilkan warning yang wajib dikonfirmasi. Baris dengan value kosong menghapus value item pada snapshot baru.
 - Kategori awal adalah `rod_skin`, `boat`, `relic_set`, dan `other`; model kategori tidak boleh menjadi enum tertutup.
