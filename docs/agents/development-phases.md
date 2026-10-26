@@ -19,7 +19,7 @@ Target MVP mencakup Fase 0–4 dengan wallet dan fee nonaktif serta `fee = 0`. F
 | 0 — Fondasi & Security Baseline | ACC-01–ACC-06 | Tidak ada | Hampir selesai |
 | 1 — Catalog Data & Admin | CAT-01–CAT-06, AUD-04, ADM-01, ADM-03 | Fase 0 | Hampir selesai |
 | 2 — Player Trade Core | INV-01–INV-04, LST-01–LST-06, SRC-01–SRC-05 | Fase 0–1 | Hampir selesai |
-| 3 — Recommendation & Negotiation | REC-01–REC-06, NEG-01–NEG-07 | Fase 0–2 | Fondasi saja |
+| 3 — Recommendation & Negotiation | REC-01–REC-06, NEG-01–NEG-07 | Fase 0–2 | Hampir selesai |
 | 4 — Pre-deal, Reveal & Trust Operations | NEG-08, DEL-01–DEL-08, AUD-01–AUD-03, ADM-02, ADM-04–ADM-05 | Fase 0–3 | Fondasi saja |
 | 5 — Wallet, Payment & Dispute Finansial | WAL-01–WAL-06, PAY-01–PAY-05 | Fase 0–4 dan keputusan produk pembayaran | Belum dimulai; bukan gate MVP |
 | 6 — Production Readiness & Launch | Seluruh NFR dan gerbang operasional | Fase 0–4 untuk MVP; Fase 5 untuk monetisasi | Belum siap |
@@ -33,7 +33,7 @@ Pemetaan di atas menempatkan seluruh 69 requirement aktif tepat pada satu fase u
 | 0 | Route authentication, verification, profile, dan preferences di `routes/web.php`; mutation privat memakai rate limit | `AuthController`, middleware idempotensi, `bootstrap/app.php`, `.github/workflows/ci.yml` | Authentication, idempotensi, dan rate limit mutation di `tests/Feature/ExampleTest.php` |
 | 1 | Route admin import, lifecycle Rod, metadata katalog, dan thumbnail di `routes/web.php`; panel `resources/js/pages/admin.tsx` | `app/Domain/Catalog`, controller admin katalog, migration Rod/thumbnail | `CatalogValueCsvImportTest.php` termasuk failure injection publish dan `resources/js/tests/admin.test.tsx` |
 | 2 | Route inventory, listing termasuk halaman edit, search, dan simulator di `routes/web.php`; UI workspace/discovery | Controller inventory/listing/search, `DiscoveryPresenter`, `WflCalculator`, model listing version | `ExampleTest.php`, E2E discovery/player flow/accessibility, dan benchmark search |
-| 3 | Belum ada route; form `trade.tsx` menargetkan endpoint negotiation yang belum terdaftar | Migration Fase 3, `RecommendationService`, `NegotiationService`, `NegotiationInvalidator`, `PhaseTwoExpiryService` | Belum ada test recommendation/negotiation |
+| 3 | Route recommendation, daftar/detail negotiation, start, counter, accept, reject, dan cancel di `routes/web.php`; UI `trade.tsx` dapat dijangkau dari listing discovery | `PhaseThreePageController`, `NegotiationController`, `RecommendationService`, `NegotiationService`, `NegotiationInvalidator`, `PhaseTwoExpiryService` | `PhaseThreeNegotiationTest.php`, `resources/js/tests/trade.test.tsx`, dan E2E negotiation di `player-flow.spec.ts` |
 | 4 | Belum ada route deal/report/suspension/audit; `trade.tsx` belum dapat dijangkau | `DealService`, controller report/suspension/audit, schema deal/reveal | `ModerationAuditTest.php` menguji service terbatas; belum ada test deal/reveal HTTP atau concurrency |
 | 5 | Tidak ada route atau UI wallet/payment | ADR-005 saja; schema dan domain wallet/payment belum tersedia | Belum ada |
 | 6 | Health route `/up`; belum ada surface operasi production | Workflow CI, harness E2E, benchmark PostgreSQL, audit correlation | Suite terakhir tercatat di memory; belum diulang pada audit roadmap |
@@ -72,15 +72,13 @@ Pemetaan di atas menempatkan seluruh 69 requirement aktif tepat pada satu fase u
 
 **Outcome:** player dapat memilih rekomendasi inventory, memulai negotiation anonim, melakukan counteroffer, dan menerima versi proposal aktif.
 
-**Bukti:** migration, model, `RecommendationService`, `NegotiationService`, invalidator, expiry service, dan komponen `trade.tsx` sudah tersedia.
+**Bukti:** listing discovery membuka recommendation nyata dari inventory pengguna; route HTTP mendukung start, counter, accept, reject, cancel, index, dan detail negotiation; alias anonim serta authorization peserta diterapkan. Counteroffer mempertahankan history, stale acceptance menghasilkan konflik, dan mutation inventory/listing menginvalidasi proposal aktif dalam transaksi yang sama. Feature, component, dan E2E test mencakup alur utama serta redaction identitas.
 
 **Gap dan blocker:**
 
-- Tidak ada controller, route, dan presenter HTTP untuk recommendation maupun negotiation; `trade.tsx` belum dapat dijangkau.
-- `NegotiationInvalidator` belum dipanggil oleh mutation inventory/listing.
-- `PhaseTwoExpiryService` belum dijadwalkan.
-- Belum ada automated test untuk authorization, ownership, counteroffer history, stale version, expiry, invalidation, retry, atau concurrency.
-- Expiry proposal dan negotiation masih keputusan produk terbuka.
+- `PhaseTwoExpiryService` telah diuji, tetapi belum dijadwalkan karena durasi expiry proposal dan negotiation masih keputusan produk terbuka.
+- Retry acceptance telah diuji idempotent dan final accept memakai row lock, tetapi test balapan dengan dua koneksi database belum tersedia.
+- Benchmark PostgreSQL khusus recommendation belum dijalankan; benchmark search Fase 2 tidak membuktikan biaya beam search recommendation.
 
 **Gerbang keluar:** seluruh action memiliki route dan policy, UI memakai data nyata, satu proposal version aktif dijaga secara atomik, versi basi selalu ditolak, perubahan inventory/listing menginvalidasi proposal terkait, dan expiry berjalan serta diuji.
 
@@ -121,11 +119,10 @@ Pemetaan di atas menempatkan seluruh 69 requirement aktif tepat pada satu fase u
 
 ## Urutan backlog
 
-1. Review dan commit penutupan gap Fase 0–2 tanpa menjalankan migration persisten.
-2. Putuskan expiry proposal/negotiation, lalu hubungkan Recommendation & Negotiation end-to-end beserta invalidation dan expiry.
-3. Verifikasi ulang seluruh Fase 0–3 setelah jalur negotiation aktif.
-4. Hubungkan Pre-deal, Reveal, dan minimum trust operations dengan privacy/concurrency test.
-5. Selesaikan production hardening dan rollout MVP Fase 0–4.
-6. Mulai Wallet & Payment hanya setelah seluruh keputusan produk Fase 5 ditutup.
+1. Putuskan expiry proposal/negotiation, aktifkan schedule expiry, lalu tambahkan test balapan PostgreSQL untuk menutup gerbang Fase 3.
+2. Hubungkan Pre-deal, Reveal, dan minimum trust operations dengan privacy/concurrency test.
+3. Verifikasi ulang seluruh Fase 0–4 setelah jalur deal aktif.
+4. Selesaikan production hardening dan rollout MVP Fase 0–4.
+5. Mulai Wallet & Payment hanya setelah seluruh keputusan produk Fase 5 ditutup.
 
 Status fase wajib diperbarui berdasarkan bukti baru. Sebuah fase tidak boleh dinaikkan menjadi selesai hanya karena schema, service, atau UI statis sudah tersedia.

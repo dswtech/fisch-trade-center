@@ -52,18 +52,18 @@
 
 ## Verifikasi terakhir
 
-- `php artisan test` pada SQLite `:memory:`: 33 test, 257 assertion, lulus setelah Collision dipasang.
-- Vitest lulus 9/9; TypeScript strict typecheck lulus; Vite build lulus; Playwright desktop/mobile lulus 16/16 termasuk WCAG A/AA setelah target tombol metadata admin diperbaiki.
+- `php artisan test` pada SQLite `:memory:`: 38 test, 327 assertion, lulus.
+- Vitest lulus 11/11; TypeScript strict typecheck lulus; Vite build lulus; Playwright desktop/mobile lulus 18/18 termasuk alur recommendation ke negotiation dan WCAG A/AA.
 - Build lokal memakai Node 22.11.0 dan memberi warning karena Vite meminta 22.12+; build tetap berhasil. Asset `/images/trade-ocean-field.png` diselesaikan saat runtime.
 - Audit statis memetakan seluruh 69 requirement aktif tepat ke satu fase utama. Bukti diperiksa melalui route, controller/service, UI, migration, dan test; hasilnya dicatat di `development-phases.md`.
 - `composer validate --strict` menyatakan schema valid, dengan warning existing untuk exact constraint Laravel dan Inertia.
 
 ## Gap implementasi per fase
 
-- Fase 0 hampir selesai; gap rate limit mutation tertutup, tetapi working tree penutupan gap belum di-commit.
+- Fase 0 hampir selesai; gap rate limit mutation tertutup dan checkpoint Fase 0–2 sudah di-push ke `main` sebagai commit `1c47c70`.
 - Fase 1 hampir selesai; gap route/UI status-alias, lifecycle Rod, pembuktian rollback publish, dan rollout migration persisten tertutup.
 - Fase 2 hampir selesai; route edit, invalidasi listing, rate limit mutation, dan kontrol homepage tertutup. INV-04 tidak aktif sampai ada aturan atribut kategori konkret.
-- Fase 3 baru fondasi; schema/service/UI tersedia tetapi route/controller/presenter, integrasi invalidator/expiry, dan seluruh test negotiation belum tersedia.
+- Fase 3 hampir selesai; recommendation dan negotiation telah terhubung end-to-end melalui HTTP/UI, participant authorization, history proposal, stale-version rejection, retry idempotent, invalidasi inventory/listing, redaction, dan test expiry. Sisa gerbang adalah keputusan durasi serta schedule expiry, test balapan PostgreSQL dua koneksi, dan benchmark recommendation.
 - Fase 4 baru fondasi; deal dan trust-operation controller belum terhubung ke route/UI/middleware serta belum memiliki test atomicity, concurrency, dan privacy reveal.
 - Fase 5 belum dimulai dan bukan gate MVP. Fase 6 belum siap karena keputusan recovery/retention, monitoring, runbook, rollout, dan re-verifikasi masih terbuka.
 
@@ -75,11 +75,10 @@
 
 ## Next step
 
-1. Review dan commit working tree penutupan gap Fase 0–2 tanpa menjalankan migration persisten.
-2. Putuskan expiry proposal/negotiation, lalu hubungkan Fase 3 end-to-end sesuai urutan backlog di `development-phases.md`.
-3. Hubungkan Fase 4 setelah gerbang Fase 3 lulus.
-4. Migration persisten berikutnya tetap hanya boleh dijalankan setelah pengguna memberi instruksi eksplisit.
-5. Operator mengunduh template terkini sebelum setiap batch upload agar selalu membawa `item_key` stabil.
+1. Putuskan expiry proposal/negotiation, aktifkan schedule, dan jalankan test concurrency/benchmark PostgreSQL untuk menutup Fase 3.
+2. Hubungkan Fase 4 setelah kebijakan expiry minimum tersedia.
+3. Migration persisten berikutnya tetap hanya boleh dijalankan setelah pengguna memberi instruksi eksplisit.
+4. Operator mengunduh template terkini sebelum setiap batch upload agar selalu membawa `item_key` stabil.
 
 ## Cara memperbarui memory
 

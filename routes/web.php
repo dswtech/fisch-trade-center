@@ -12,7 +12,9 @@ use App\Http\Controllers\CatalogValueImportController;
 use App\Http\Controllers\CatalogAdminController;
 use App\Http\Controllers\RodAdminController;
 use App\Http\Controllers\PhaseOnePageController;
+use App\Http\Controllers\PhaseThreePageController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\NegotiationController;
 use Illuminate\Foundation\Auth\EmailVerificationRequest;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -48,6 +50,9 @@ Route::middleware('auth')->group(function (): void {
         Route::get('/my-listings', [PhaseOnePageController::class, 'listings'])->name('listings.manage');
         Route::get('/listings/create', [PhaseOnePageController::class, 'listingCreate'])->name('listings.create');
         Route::get('/listings/{listing}/edit', [PhaseOnePageController::class, 'listingEdit'])->name('listings.edit');
+        Route::get('/recommendations/{listing}', [PhaseThreePageController::class, 'recommendations'])->name('recommendations.show');
+        Route::get('/negotiations', [PhaseThreePageController::class, 'index'])->name('negotiations.index');
+        Route::get('/negotiations/{negotiation}', [PhaseThreePageController::class, 'show'])->name('negotiations.show');
         Route::middleware('throttle:60,1')->group(function (): void {
             Route::post('/inventory', [InventoryController::class, 'store'])->name('inventory.store');
             Route::patch('/inventory/{entry}', [InventoryController::class, 'update'])->name('inventory.update');
@@ -55,6 +60,11 @@ Route::middleware('auth')->group(function (): void {
             Route::post('/listings', [ListingController::class, 'store'])->name('listings.store');
             Route::patch('/listings/{listing}', [ListingController::class, 'update'])->name('listings.update');
             Route::delete('/listings/{listing}', [ListingController::class, 'destroy'])->name('listings.destroy');
+            Route::post('/negotiations', [NegotiationController::class, 'store'])->name('negotiations.store');
+            Route::post('/negotiations/{negotiation}/counter', [NegotiationController::class, 'counter'])->name('negotiations.counter');
+            Route::post('/negotiations/{negotiation}/accept', [NegotiationController::class, 'accept'])->name('negotiations.accept');
+            Route::post('/negotiations/{negotiation}/reject', [NegotiationController::class, 'reject'])->name('negotiations.reject');
+            Route::post('/negotiations/{negotiation}/cancel', [NegotiationController::class, 'cancel'])->name('negotiations.cancel');
         });
         Route::middleware('admin')->prefix('admin')->name('admin.')->group(function (): void {
             Route::get('/', [AdminController::class, 'index'])->name('index');

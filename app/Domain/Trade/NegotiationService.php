@@ -61,12 +61,14 @@ final class NegotiationService
             $proposal = ProposalVersion::where('negotiation_id', $negotiation->id)->where('version', $proposalVersion)->lockForUpdate()->firstOrFail();
             abort_unless($proposal->status === 'active' && $proposal->expires_at->isFuture(), 409, 'Proposal is not active.');
             $this->validateProposalInventory($proposal);
-            DB::table('proposal_acceptances')->insertOrIgnore(['proposal_version_id' => $proposal->id, 'user_id' => $actor->id, 'accepted_at' => now()]);
+            $inserted = DB::table('proposal_acceptances')->insertOrIgnore(['proposal_version_id' => $proposal->id, 'user_id' => $actor->id, 'accepted_at' => now()]);
             if (DB::table('proposal_acceptances')->where('proposal_version_id', $proposal->id)->count() === 2) {
                 $proposal->update(['status' => 'accepted']);
                 $negotiation->update(['status' => 'accepted', 'last_activity_at' => now()]);
             }
-            $this->audit($actor->id, 'proposal.accepted', $negotiation->public_id, ['proposal_version' => $proposalVersion]);
+            if ($inserted === 1) {
+                $this->audit($actor->id, 'proposal.accepted', $negotiation->public_id, ['proposal_version' => $proposalVersion]);
+            }
             return $proposal->fresh();
         });
     }

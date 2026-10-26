@@ -51,6 +51,18 @@ test('simulator reports fair for equal catalog items',async({page})=>{
   await expect(page.locator('.sim-result')).toContainText('0.00%');
 });
 
+test('player starts an anonymous negotiation from a live recommendation',async({page})=>{
+  await page.goto('/');
+  await page.getByRole('link',{name:/Find a match|Cari kombinasi/}).first().click();
+  await expect(page.getByRole('heading',{name:/Inventory recommendations|Rekomendasi inventory/})).toBeVisible();
+  await expect(page.getByText(/FAIR for you|FAIR untuk kamu/).first()).toBeVisible();
+  await page.getByRole('button',{name:/Send proposal|Kirim proposal/}).first().click();
+  await expect(page).toHaveURL(/\/negotiations\//);
+  await expect(page.getByText(/Status: proposed|Status: proposed/i)).toBeVisible();
+  expect(await page.content()).not.toContain('SeedSecretUSN');
+  expect(await page.content()).not.toContain('SeedSecretIGN');
+});
+
 test('failed profile mutation preserves private input and retries manually',async({page})=>{
   await page.goto('/profile');
   let attempts=0;

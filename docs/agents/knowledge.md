@@ -88,6 +88,10 @@ Setelah final deal berhasil, kedua pihak boleh melihat USN dan IGN satu sama lai
 - Hanya satu proposal yang aktif pada satu waktu.
 - Setiap counteroffer menutup proposal aktif sebelumnya sebagai `superseded` dan membuat versi baru.
 - Accept terhadap versi basi harus ditolak.
+- Recommendation hanya memakai inventory aktif milik viewer dan value snapshot listing. UI menampilkan total, delta, offer range, snapshot, item tanpa value, serta perspektif viewer.
+- Route detail negotiation hanya tersedia bagi initiator atau owner. Discovery dan recommendation tidak mengirim email, USN, atau IGN pihak lawan.
+- Counteroffer mengganti sisi milik actor dan membawa sisi lawan dari proposal aktif. Versi lama menjadi `superseded` dan tetap tersedia sebagai history.
+- Perubahan inventory yang dipakai proposal atau perubahan/cancel listing mengubah negotiation dan proposal aktif menjadi `invalidated`.
 
 ### Deal
 

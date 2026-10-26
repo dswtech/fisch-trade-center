@@ -1,6 +1,7 @@
 <?php
 namespace App\Http\Controllers;
 
+use App\Domain\Trade\NegotiationInvalidator;
 use App\Models\CatalogItem;
 use App\Models\InventoryEntry;
 use Illuminate\Http\RedirectResponse;
@@ -10,6 +11,8 @@ use Illuminate\Support\Facades\DB;
 
 class InventoryController extends Controller
 {
+    public function __construct(private readonly NegotiationInvalidator $negotiations) {}
+
     public function store(Request $request):RedirectResponse
     {
         $data=$request->validate(['catalogItemId'=>['required','uuid'],'quantity'=>['required','integer','min:1','max:999']]);
@@ -18,6 +21,7 @@ class InventoryController extends Controller
             $entry=InventoryEntry::firstOrNew(['user_id'=>$request->user()->id,'catalog_item_id'=>$item->id]);
             $entry->fill(['quantity'=>$data['quantity'],'archived_at'=>null])->save();
             $this->invalidateListings($entry, (int) $data['quantity']);
+            $this->negotiations->forInventoryEntry($entry->id);
         });
         return back()->with('success','Inventory updated.');
     }
@@ -28,6 +32,7 @@ class InventoryController extends Controller
         DB::transaction(function () use ($owned, $quantity): void {
             $owned->update(['quantity'=>$quantity]);
             $this->invalidateListings($owned, $quantity);
+            $this->negotiations->forInventoryEntry($owned->id);
         });
         return back()->with('success','Quantity updated.');
     }
@@ -37,6 +42,7 @@ class InventoryController extends Controller
         DB::transaction(function () use ($owned): void {
             $owned->update(['archived_at'=>now()]);
             $this->invalidateListings($owned, 0);
+            $this->negotiations->forInventoryEntry($owned->id);
         });
         return back()->with('success','Inventory entry archived.');
     }

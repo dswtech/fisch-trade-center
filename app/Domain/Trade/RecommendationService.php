@@ -66,7 +66,8 @@ final class RecommendationService
             $beam = array_slice($next, 0, $beamWidth);
         }
 
-        $threshold = (float) (DB::table('system_settings')->where('key', 'fair_threshold_percent')->value('value') ?? 10);
+        $storedThreshold = DB::table('system_settings')->where('key', 'fair_threshold_percent')->value('value');
+        $threshold = $storedThreshold === null ? 10.0 : (float) (json_decode((string) $storedThreshold, true) ?? 10);
         $results = collect($beam)->filter(fn (array $candidate): bool => $candidate['items'] !== [])->unique(fn (array $candidate): string => $this->key($candidate))->take((int) config('phase_two.recommendation_limit', 10))->map(function (array $candidate) use ($target, $threshold): array {
             $delta = $target - $candidate['total'];
             $percent = $candidate['total'] > 0 ? ($delta / $candidate['total']) * 100 : null;
