@@ -45,3 +45,65 @@ jobs:
           path: playwright-report
           if-no-files-found: ignore
 
+  production-operations:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: fisch_trade_benchmark
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d fisch_trade_benchmark"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      APP_ENV: benchmark
+      APP_KEY: base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+      APP_DEBUG: 'false'
+      DB_CONNECTION: pgsql
+      DB_HOST: 127.0.0.1
+      DB_PORT: 5432
+      DB_DATABASE: fisch_trade_benchmark
+      DB_USERNAME: postgres
+      DB_PASSWORD: postgres
+      CACHE_STORE: database
+      SESSION_DRIVER: database
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: fileinfo, mbstring, pdo_pgsql
+          coverage: none
+      - name: Install locked backend dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress
+      - name: Validate configuration and operation artifacts
+        shell: bash
+        run: |
+          composer validate --no-check-publish
+          bash -n ops/linux/backup.sh ops/linux/deploy.sh ops/linux/restore-drill.sh
+          APP_ENV=production php artisan config:cache
+          APP_ENV=production php artisan route:cache
+          if APP_ENV=production php artisan route:list --json | grep -q 'admin/time-controls'; then exit 1; fi
+          php artisan route:clear
+          php artisan config:clear
+      - name: Run PostgreSQL migration and backup restore drill
+        shell: bash
+        run: |
+          php artisan migrate:fresh --force
+          php tests/benchmark/negotiation-concurrency.php
+          php tests/benchmark/deal-concurrency.php
+          php tests/benchmark/search-matrix.php
+          mkdir -p storage/app/public/catalog-thumbnails "$RUNNER_TEMP/ftc-backups"
+          printf 'synthetic-thumbnail' > storage/app/public/catalog-thumbnails/fixture.webp
+          chmod +x ops/linux/backup.sh ops/linux/restore-drill.sh
+          FTC_BACKUP_DIR="$RUNNER_TEMP/ftc-backups" FTC_APP_CURRENT="$GITHUB_WORKSPACE" ops/linux/backup.sh
+          backup_path="$(find "$RUNNER_TEMP/ftc-backups/hourly" -mindepth 1 -maxdepth 1 -type d | sort | tail -n 1)"
+          FTC_RESTORE_DATABASE=fisch_trade_ops_restore_drill ops/linux/restore-drill.sh "$backup_path"
+

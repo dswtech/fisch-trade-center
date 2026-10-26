@@ -17,15 +17,14 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\NegotiationController;
 use App\Http\Controllers\OperatorAuditController;
 use App\Http\Controllers\ReportController;
+use App\Http\Controllers\ReadinessController;
 use App\Http\Controllers\SuspensionController;
 use App\Http\Controllers\DealController;
 use App\Http\Controllers\AdminTimeControlController;
-use Illuminate\Foundation\Auth\EmailVerificationRequest;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
-use Inertia\Inertia;
 
 Route::get('/', DashboardController::class)->name('dashboard');
+Route::get('/ready', ReadinessController::class)->name('ready');
 Route::get('/catalog', [PhaseOnePageController::class, 'catalog'])->name('catalog');
 Route::get('/listings', DashboardController::class)->name('listings');
 Route::get('/search', SearchController::class)->name('search');
@@ -39,13 +38,9 @@ Route::middleware('guest')->group(function (): void {
 
 Route::middleware('auth')->group(function (): void {
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
-    Route::get('/email/verify', fn () => Inertia::render('verify-email'))->name('verification.notice');
-    Route::get('/email/verify/{id}/{hash}', function (EmailVerificationRequest $request) {
-        $request->fulfill(); return to_route('dashboard')->with('success', 'Email verified.');
-    })->middleware('signed')->name('verification.verify');
-    Route::post('/email/verification-notification', function (Request $request) {
-        $request->user()->sendEmailVerificationNotification(); return back()->with('success', 'Verification link sent.');
-    })->middleware('throttle:6,1')->name('verification.send');
+    Route::get('/email/verify', [AuthController::class, 'verificationNotice'])->name('verification.notice');
+    Route::get('/email/verify/{id}/{hash}', [AuthController::class, 'verifyEmail'])->middleware('signed')->name('verification.verify');
+    Route::post('/email/verification-notification', [AuthController::class, 'resendVerification'])->middleware('throttle:6,1')->name('verification.send');
     Route::patch('/preferences', [PreferenceController::class, 'update'])->middleware('throttle:60,1')->name('preferences.update');
     Route::get('/profile', [PhaseOnePageController::class, 'profile'])->name('profile');
     Route::patch('/profile', [ProfileController::class, 'update'])->middleware('throttle:60,1')->name('profile.update');

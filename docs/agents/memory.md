@@ -30,6 +30,8 @@
 - Environment `local`, `development`, `staging`, dan `testing` menyediakan `/admin/time-controls` khusus admin untuk memicu expiry pra-deal atau reveal entitlement secara manual. Semua trigger diaudit dan route tidak didaftarkan pada production.
 - Roadmap aktif memakai tujuh fase capability. Target MVP berakhir pada Fase 4 dengan wallet/fee nonaktif dan `fee = 0`; Fase 5 adalah monetisasi pasca-MVP, sedangkan Fase 6 adalah production readiness.
 - PRD utama berada di `docs/agents/prd/README.md`; manifest dokumentasi menjadi pintu masuk untuk urutan baca.
+- Fase 6 memakai baseline Linux VM: Nginx, PHP 8.4-FPM, PostgreSQL 16, systemd scheduler, release symlink atomik, shared `.env`/storage, JSON log `stderr`, RPO 1 jam, dan RTO 4 jam.
+- Fase 5 tetap ditunda. Baseline development yang dicatat adalah gateway mock, IDR, deposit Rp10.000–Rp1.000.000, dan model fee tetap; nominal fee serta provider/metode/settlement/refund production belum diputuskan.
 
 ## Pekerjaan redesign katalog yang terverifikasi
 
@@ -61,11 +63,22 @@
 - Konfigurasi koneksi PostgreSQL menetapkan timezone session `UTC`; ini mencegah timestamp tanpa offset dibaca sebagai waktu server Asia/Jakarta pada concurrency test.
 - Final acceptance bersamaan diuji dengan dua proses/koneksi PostgreSQL: tepat dua acceptance, satu finalisasi/reveal audit, dua identity snapshot, dan dua reveal entitlement.
 
+## Production readiness Fase 6
+
+- `EnsureCorrelationId` dan security headers aktif global. Production menambah CSP nonce serta HSTS untuk HTTPS; template production memakai cookie secure/HTTP-only/SameSite, database session/cache, JSON log `stderr` level `info`, wallet dan fee tetap nonaktif.
+- `/up` tetap menjadi liveness. `/ready` fail-closed terhadap PostgreSQL, scheduler heartbeat lebih tua dari tiga menit, catalog storage tidak writable, dan disk bebas kurang dari 2 GB. Scheduler menulis heartbeat setiap menit.
+- `ops:retention` dry-run secara default dan hanya memutasi dengan `--execute` ketika `RETENTION_ENABLED=true`. Identity/reveal dipangkas 90 hari; report selesai dan negotiation terminal tanpa deal 180 hari; deal graph, suspension selesai, dan audit satu tahun. Report aktif serta katalog/value historis dipertahankan. Test mencakup batas tanggal, replay, graph dependency-order, dan rollback paksa per chunk.
+- Queue report memprioritaskan `suspected_scam`/`identity_misuse`, menandai SLA review 24 jam pada DTO, dan hanya mengizinkan pembukaan ulang manual ke `reviewing` dalam tujuh hari. Tidak ada auto-suspend atau kompensasi no-show.
+- Artefak `ops/linux/` menyediakan Nginx, systemd scheduler/backup timer, backup PostgreSQL custom-format plus thumbnail/checksum/row-count, restore drill disposable, dan deploy/rollback symlink. Deploy menolak launch tanpa deklarasi off-host backup siap dan menolak migration tanpa flag otorisasi eksplisit.
+- CI memiliki job Ubuntu + PostgreSQL 16 untuk migration, production config/route cache, larangan time controls production, syntax script, concurrency, benchmark 100.000 listing, serta backup/restore drill.
+- ADR-009 dan runbook deployment, rollback, backup/restore, incident response, monitoring, retention, serta gerbang launch telah ditambahkan. Status Fase 6 adalah `Ready for rollout — blocked by off-host backup` karena encrypted off-host storage dan akses host belum tersedia.
+
 ## Verifikasi terakhir
 
-- `php artisan test` pada SQLite `:memory:`: 46 test, 493 assertion, lulus.
+- `composer test` pada SQLite `:memory:`: 57 test, 571 assertion, lulus.
 - Vitest lulus 14/14; TypeScript strict typecheck lulus; Vite build lulus; Playwright desktop/mobile lulus 22/22 termasuk deal/reveal dua participant, halaman time controls admin, dan WCAG A/AA.
-- Test PostgreSQL disposable dengan dua proses/koneksi lulus untuk acceptance proposal dan final acceptance deal. Deal concurrency menghasilkan status `revealed`, tepat 2 acceptance, 2 identity snapshot, 2 reveal entitlement, dan 1 audit reveal. Benchmark 100.000 listing mencatat p95 maksimum `428,61 ms`, di bawah target `1.000 ms`.
+- Test PostgreSQL disposable dengan dua proses/koneksi lulus untuk acceptance proposal dan final acceptance deal. Deal concurrency menghasilkan status `revealed`, tepat 2 acceptance, 2 identity snapshot, 2 reveal entitlement, dan 1 audit reveal. Benchmark 100.000 listing terbaru mencatat p95 maksimum `357,33 ms`, di bawah target `1.000 ms`.
+- Syntax PHP dan Bash, production config cache, route cache, YAML CI, link Markdown, manifest dokumentasi, dan `git diff --check` lulus. Backup/restore Linux belum dieksekusi lokal; job CI Linux yang baru akan menjadi bukti eksekusinya setelah commit dipush.
 - Lint design-taste pada halaman trade/time controls menghasilkan 0 fail dan 1 warning untuk penggunaan em-dash sebagai simbol nilai kosong/label.
 - Build lokal memakai Node 22.11.0 dan memberi warning karena Vite meminta 22.12+; build tetap berhasil. Asset `/images/trade-ocean-field.png` diselesaikan saat runtime.
 - Audit statis memetakan seluruh 69 requirement aktif tepat ke satu fase utama. Bukti diperiksa melalui route, controller/service, UI, migration, dan test; hasilnya dicatat di `development-phases.md`.
@@ -79,20 +92,20 @@
 - Fase 3 selesai; recommendation dan negotiation telah terhubung end-to-end melalui HTTP/UI, participant authorization, history proposal, stale-version rejection, retry idempotent, invalidasi inventory/listing, redaction, scheduler expiry, dan test concurrency PostgreSQL dua koneksi.
 - Implementasi Fase 3 tersebut di-push ke `origin/main` sebagai commit `0d4a446` (`feat: connect phase three negotiation flow`).
 - Fase 4 selesai: deal/reveal, expiry otomatis, time controls admin non-production, report participant, queue audit operator, update status report, suspend/lift, authorization, rate limit, dan blokir trade mutation untuk akun suspended sudah terhubung ke route/UI serta diuji.
-- Fase 5 belum dimulai dan bukan gate MVP. Fase 6 belum siap karena keputusan recovery/retention, monitoring, runbook, rollout, dan re-verifikasi masih terbuka.
+- Fase 5 belum dimulai dan bukan gate MVP. Keputusan awal gateway mock/IDR/batas deposit/model fee sudah dicatat, tetapi keputusan production finansial masih terbuka.
+- Fase 6 ready for rollout tetapi launch tetap diblokir encrypted off-host backup, akses host, konfigurasi monitor eksternal, dan restore drill off-host.
 
 ## Keputusan terbuka produk
 
-- Provider pembayaran konkret, metode pembayaran aktif, mata uang, minimum deposit, dan kebijakan fee/refund.
-- Kebijakan report, no-show, dispute, suspend, dan refund biaya layanan.
-- Retensi audit, proposal, dan identity snapshot.
+- Provider/metode/settlement pembayaran production, nominal fee tetap, expiry quote, refund, reconciliation, dan dispute finansial.
+- Provider storage off-host terenkripsi dan kredensial akses Linux VM.
 
 ## Next step
 
-1. Mulai hardening Fase 6: observability, backup/restore, RPO/RTO, retensi, dan runbook launch.
-2. Tutup kebijakan operasi report, no-show, suspension, appeal, dan retensi sebelum production launch.
-3. Migration persisten berikutnya tetap hanya boleh dijalankan setelah pengguna memberi instruksi eksplisit.
-4. Fase 5 tetap tidak dimulai sebelum keputusan provider, currency, fee, refund, dan reconciliation ditutup.
+1. Commit/push perubahan Fase 6, lalu pastikan job CI Linux backup/restore lulus.
+2. Sediakan akses Linux VM, encrypted off-host backup, dan provider-neutral monitor; jalankan restore drill dari off-host copy.
+3. Migration persisten dan deployment nyata tetap hanya boleh dijalankan setelah pengguna memberi instruksi eksplisit.
+4. Fase 5 tetap tidak dimulai sebelum sisa keputusan provider, nominal fee, refund, dan reconciliation ditutup.
 
 ## Cara memperbarui memory
 

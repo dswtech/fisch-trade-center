@@ -20,7 +20,7 @@ Guest dapat melihat landing page, katalog, dan listing publik yang sudah diredak
 
 Fisch Trade Center mengurangi ketidakpastian trade dengan menyatukan katalog, published value snapshot yang immutable, inventory self-declared, listing anonim, pencarian deterministik, dan simulasi W/F/L yang menyebut perspektif secara eksplisit.
 
-Target MVP berakhir pada Fase 4. Alur akun, katalog, inventory, listing, search, simulasi, negotiation, deal, dan reveal harus berjalan end-to-end. Wallet dan fee tetap nonaktif dengan `fee = 0`. Identitas lawan tetap teredaksi sampai final acceptance berhasil secara atomik.
+Target MVP berakhir pada Fase 4. Alur akun, katalog, inventory, listing, search, simulasi, negotiation, deal, dan reveal harus berjalan end-to-end. Wallet dan fee tetap nonaktif dengan `fee = 0`. Identitas lawan tetap teredaksi sampai final acceptance berhasil secara atomik. MVP siap rollout ke Linux VM, tetapi launch diblokir sampai encrypted off-host backup dan akses host tersedia.
 
 ## Positioning
 
@@ -39,6 +39,7 @@ Produk bukan sekadar papan listing: setiap hasil penilaian dan listing yang bern
 
 - Roadmap memakai Fase 0–6. Fase 0–2 mencakup fondasi, katalog/admin, inventory, listing, search, dan W/F/L. Fase 3–4 melengkapi MVP melalui negotiation, deal/reveal, dan trust operations minimum.
 - Wallet, payment, refund, compensation, dan dispute finansial berada di Fase 5 pasca-MVP. Production readiness berada di Fase 6.
+- Baseline Fase 5 yang belum diaktifkan memakai gateway mock, IDR, deposit Rp10.000–Rp1.000.000, dan model fee tetap; nominal fee, provider production, settlement, serta refund belum diputuskan.
 - Email wajib terverifikasi sebelum inventory, listing, atau simulator privat.
 - `fair_threshold_percent` awal adalah `10`; perubahan admin berlaku prospektif dan diaudit.
 - Listing aktif kedaluwarsa setelah 14 hari.
@@ -46,6 +47,10 @@ Produk bukan sekadar papan listing: setiap hasil penilaian dan listing yang bern
 - Pra-deal kedaluwarsa setelah 30 menit. Akses identity snapshot setelah reveal berlaku 30 hari; expiry tidak menghapus snapshot immutable.
 - Environment local, development, staging, dan testing menyediakan halaman admin khusus untuk memicu expiry pra-deal atau akses reveal secara manual. Surface ini tidak tersedia di production dan setiap tindakan diaudit.
 - Deal MVP memakai `fee = 0`, mewajibkan disclaimer non-escrow, dan baru membuka identity snapshot setelah final acceptance kedua pihak berhasil atomik.
+- Production memakai Nginx, PHP 8.4-FPM, PostgreSQL 16, systemd scheduler, release symlink atomik, JSON log ke `stderr`, serta liveness `/up` dan fail-closed readiness `/ready`.
+- Target recovery adalah RPO 1 jam dan RTO 4 jam. Backup lokal menyimpan 48 hourly dan 14 daily; restore drill bulanan dan encrypted off-host copy wajib sebelum launch.
+- Retensi: identity snapshot/reveal entitlement 90 hari; report selesai dan negotiation terminal tanpa deal 180 hari; deal graph, suspension selesai, serta audit satu tahun. Value snapshot dan katalog historis dipertahankan. Penghapusan akun belum tersedia pada MVP.
+- Moderasi manual menargetkan review awal 24 jam, memprioritaskan scam/identity misuse, tidak auto-suspend, tidak memberi kompensasi no-show, dan menerima appeal manual selama tujuh hari.
 - Katalog/value berasal dari CSV UTF-8 yang diunggah admin. Upload hanya membuat staging; publish manual melakukan partial upsert dan membuat snapshot immutable secara atomik.
 - Perubahan value di atas 25% menghasilkan warning yang wajib dikonfirmasi. Baris dengan value kosong menghapus value item pada snapshot baru.
 - Kategori awal adalah `rod_skin`, `boat`, `relic_set`, dan `other`; model kategori tidak boleh menjadi enum tertutup.

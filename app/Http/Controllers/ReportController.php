@@ -42,6 +42,9 @@ final class ReportController extends Controller
     {
         $case = Report::query()->where('public_id', $report)->firstOrFail();
         $data = $request->validate(['status' => ['required', Rule::in(Report::STATUSES)]]);
+        if (in_array($case->status, ['resolved', 'dismissed'], true) && $data['status'] === 'reviewing') {
+            abort_unless($case->resolved_at?->gte(now()->subDays((int) config('operations.moderation_appeal_days'))), 422, 'The seven-day appeal window has closed.');
+        }
         $before = ['status' => $case->status];
         $case->forceFill([
             'status' => $data['status'],

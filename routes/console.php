@@ -2,10 +2,13 @@
 
 use App\Domain\Trade\PhaseTwoExpiryService;
 use App\Domain\Trade\PhaseFourExpiryService;
+use App\Domain\Operations\RetentionService;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schedule;
+use Symfony\Component\Console\Command\Command;
 
 Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
@@ -20,6 +23,41 @@ Schedule::call(fn (): array => app(PhaseFourExpiryService::class)->expire())
     ->name('trade:expire-phase-four')
     ->everyMinute()
     ->withoutOverlapping();
+
+Schedule::command('ops:heartbeat')
+    ->name('operations:heartbeat')
+    ->everyMinute()
+    ->withoutOverlapping();
+
+Schedule::command('ops:retention --execute')
+    ->dailyAt('02:30')
+    ->when(fn (): bool => (bool) config('operations.retention_enabled'))
+    ->withoutOverlapping();
+
+Artisan::command('ops:heartbeat', function (): int {
+    Cache::forever((string) config('operations.heartbeat_key'), now()->getTimestamp());
+
+    return Command::SUCCESS;
+})->purpose('Record scheduler readiness heartbeat.');
+
+Artisan::command('ops:retention {--execute}', function (RetentionService $retention): int {
+    $rows = collect($retention->plan())->map(fn (int $count, string $type): array => [$type, $count])->values()->all();
+    $this->table(['candidate', 'count'], $rows);
+    if (! $this->option('execute')) {
+        $this->info('Dry run only. Pass --execute after review.');
+
+        return Command::SUCCESS;
+    }
+    if (! config('operations.retention_enabled')) {
+        $this->error('RETENTION_ENABLED must be true before execution.');
+
+        return Command::FAILURE;
+    }
+    $deleted = $retention->execute();
+    $this->info('Retention completed: '.json_encode($deleted, JSON_THROW_ON_ERROR));
+
+    return Command::SUCCESS;
+})->purpose('Preview or execute approved data retention policy.');
 
 Artisan::command('catalog:remove-fishing-rods {--confirm}', function (): int {
     if (! $this->option('confirm')) {

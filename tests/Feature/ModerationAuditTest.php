@@ -134,6 +134,39 @@ final class ModerationAuditTest extends TestCase
         $this->actingAs($target)->post('/negotiations', [])->assertSessionHasErrors(['listingId']);
     }
 
+    public function test_priority_reports_lead_queue_and_appeal_window_is_seven_days(): void
+    {
+        $operator = $this->user('priority-operator@example.test', 'operator');
+        $reporter = $this->user('priority-reporter@example.test');
+        $target = $this->user('priority-target@example.test');
+        Report::create([
+            'reporter_id' => $reporter->id, 'target_type' => 'user', 'target_public_id' => $target->public_id,
+            'reason_code' => 'other', 'status' => 'open', 'created_at' => now()->subHours(25), 'updated_at' => now()->subHours(25),
+        ]);
+        $priority = Report::create([
+            'reporter_id' => $reporter->id, 'target_type' => 'user', 'target_public_id' => $target->public_id,
+            'reason_code' => 'identity_misuse', 'status' => 'open', 'created_at' => now()->subHour(), 'updated_at' => now()->subHour(),
+        ]);
+
+        $this->actingAs($operator)->get('/operator/audit')->assertInertia(fn (Assert $page) => $page
+            ->where('reports.0.id', $priority->public_id)
+            ->where('reports.1.slaBreached', true));
+
+        $appealable = Report::create([
+            'reporter_id' => $reporter->id, 'target_type' => 'user', 'target_public_id' => $target->public_id,
+            'reason_code' => 'no_show', 'status' => 'resolved', 'resolved_at' => now()->subDays(6),
+        ]);
+        $closed = Report::create([
+            'reporter_id' => $reporter->id, 'target_type' => 'user', 'target_public_id' => $target->public_id,
+            'reason_code' => 'abusive_behavior', 'status' => 'dismissed', 'resolved_at' => now()->subDays(7)->subSecond(),
+        ]);
+
+        $this->actingAs($operator)->patch('/operator/reports/'.$appealable->public_id, ['status' => 'reviewing'])->assertRedirect();
+        self::assertSame('reviewing', $appealable->fresh()->status);
+        $this->actingAs($operator)->patch('/operator/reports/'.$closed->public_id, ['status' => 'reviewing'])->assertStatus(422);
+        self::assertSame('dismissed', $closed->fresh()->status);
+    }
+
     private function user(string $email, string $role = 'player'): User
     {
         $user = User::create(['name' => ucfirst($role), 'email' => $email, 'password' => 'password123', 'role' => $role]);

@@ -3,8 +3,8 @@
 | Item | Keterangan |
 |---|---|
 | Dokumen | Manifest dokumentasi agen |
-| Versi | v1.2 |
-| Tanggal | 25 Oktober 2026 |
+| Versi | v1.3 |
+| Tanggal | 26 Oktober 2026 |
 | Pemilik | Product dan Engineering |
 | Status | Berlaku |
 
@@ -37,6 +37,8 @@ Direktori ini adalah sumber konteks bersama bagi manusia dan coding agent. Setia
 | [`adr/ADR-006-server-only-configuration.md`](adr/ADR-006-server-only-configuration.md) | ADR | Engineering | Menetapkan seluruh secret dan konfigurasi sensitif tetap server-only. |
 | [`adr/ADR-007-production-postgresql-test-sqlite.md`](adr/ADR-007-production-postgresql-test-sqlite.md) | ADR | Engineering | Menetapkan PostgreSQL untuk produksi dan SQLite disposable untuk test. |
 | [`adr/ADR-008-manual-csv-catalog-import.md`](adr/ADR-008-manual-csv-catalog-import.md) | ADR | Engineering | Menetapkan upload CSV manual, partial upsert, master Rod non-tradable, dan thumbnail katalog. |
+| [`adr/ADR-009-production-operations.md`](adr/ADR-009-production-operations.md) | ADR | Engineering + Operations | Menetapkan baseline Linux VM, observability, retention, deployment, backup, dan recovery. |
+| [`operations/README.md`](operations/README.md) | Runbook | Engineering + Operations | Menjelaskan deployment, rollback, backup/restore, incident response, monitoring, retention, dan gerbang launch. |
 
 ## Referensi eksternal
 

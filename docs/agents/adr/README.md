@@ -3,8 +3,8 @@
 | Item | Keterangan |
 |---|---|
 | Dokumen | Indeks ADR Fisch Trade Center |
-| Versi | v1.0 |
-| Tanggal | 24 Oktober 2026 |
+| Versi | v1.1 |
+| Tanggal | 26 Oktober 2026 |
 | Pemilik | Engineering |
 | Status | Berlaku |
 
@@ -20,5 +20,6 @@
 | [ADR-006](ADR-006-server-only-configuration.md) | Secret dan konfigurasi sensitif hanya di server | Berlaku |
 | [ADR-007](ADR-007-production-postgresql-test-sqlite.md) | PostgreSQL produksi dan SQLite disposable untuk test | Berlaku |
 | [ADR-008](ADR-008-manual-csv-catalog-import.md) | Import katalog/value CSV manual dan media katalog | Berlaku |
+| [ADR-009](ADR-009-production-operations.md) | Baseline operasi Linux VM, observability, retention, dan recovery | Berlaku |
 
 Nomor ADR tidak pernah digunakan ulang. ADR berlaku tidak boleh ditulis ulang untuk mengubah keputusannya; buat ADR berikutnya, lalu ubah status ADR lama menjadi `Digantikan ADR-nnn` tanpa menghapus pertimbangan awal.

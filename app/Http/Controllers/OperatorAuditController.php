@@ -21,7 +21,10 @@ final class OperatorAuditController extends Controller
             'public_id', 'correlation_id', 'event_type', 'subject_type', 'subject_public_id', 'reason_code', 'before_state', 'after_state', 'metadata', 'created_at',
         ]);
 
-        $reports = Report::query()->latest('id')->limit(100)->get()->map(function (Report $report): array {
+        $reports = Report::query()
+            ->orderByRaw("case when reason_code in ('suspected_scam', 'identity_misuse') then 0 else 1 end")
+            ->orderByRaw("case when status in ('open', 'reviewing') and created_at <= ? then 0 else 1 end", [now()->subHours((int) config('operations.moderation_review_hours'))])
+            ->oldest('created_at')->limit(100)->get()->map(function (Report $report): array {
             $targets = collect();
             if ($report->target_type === 'user') {
                 $targets = User::query()->where('public_id', $report->target_public_id)->get();
@@ -39,6 +42,8 @@ final class OperatorAuditController extends Controller
                 'reasonCode' => $report->reason_code,
                 'status' => $report->status,
                 'createdAt' => $report->created_at->toIso8601String(),
+                'slaBreached' => in_array($report->status, ['open', 'reviewing'], true)
+                    && $report->created_at->lte(now()->subHours((int) config('operations.moderation_review_hours'))),
                 'targets' => $targets->map(fn (User $user): array => ['id' => $user->public_id, 'name' => $user->name])->values(),
             ];
         });

@@ -3,6 +3,7 @@ namespace App\Http\Controllers;
 
 use App\Models\User;
 use Illuminate\Auth\Events\Registered;
+use Illuminate\Foundation\Auth\EmailVerificationRequest;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -13,6 +14,9 @@ use Inertia\Response;
 class AuthController extends Controller
 {
     public function create(Request $request): Response { return Inertia::render('auth', ['mode' => $request->routeIs('register') ? 'register' : 'login']); }
+    public function verificationNotice(): Response { return Inertia::render('verify-email'); }
+    public function verifyEmail(EmailVerificationRequest $request): RedirectResponse { $request->fulfill(); return to_route('dashboard')->with('success', 'Email verified.'); }
+    public function resendVerification(Request $request): RedirectResponse { $request->user()->sendEmailVerificationNotification(); return back()->with('success', 'Verification link sent.'); }
     public function register(Request $request): RedirectResponse
     {
         $data = $request->validate(['name' => ['required','string','max:80'], 'email' => ['required','email','max:255','unique:users,email'], 'password' => ['required','confirmed',Password::min(8)]]);

@@ -2,7 +2,7 @@
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}" class="dark">
 <head>
     <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="color-scheme" content="dark light">
-    <script>(()=>{const t=localStorage.getItem('ftc-theme')||'dark';document.documentElement.classList.toggle('dark',t==='dark');document.documentElement.dataset.theme=t})()</script>
+    <script nonce="{{ request()->attributes->get('csp_nonce') }}">(()=>{const t=localStorage.getItem('ftc-theme')||'dark';document.documentElement.classList.toggle('dark',t==='dark');document.documentElement.dataset.theme=t})()</script>
     <title>Fisch Trade Center</title>
     @inertiaHead
     @if (config('app.vite_dev_server'))

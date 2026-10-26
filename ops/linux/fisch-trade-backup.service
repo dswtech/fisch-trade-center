@@ -1,0 +1,12 @@
+[Unit]
+Description=Fisch Trade Center hourly backup
+After=postgresql.service
+
+[Service]
+Type=oneshot
+User=www-data
+Group=www-data
+EnvironmentFile=/etc/fisch-trade-center/backup.env
+ExecStart=/srv/fisch-trade-center/current/ops/linux/backup.sh
+NoNewPrivileges=true
+PrivateTmp=true

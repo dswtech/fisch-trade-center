@@ -3,8 +3,8 @@
 | Item | Keterangan |
 |---|---|
 | Dokumen | Knowledge domain dan implementasi |
-| Versi | v1.1 |
-| Tanggal | 25 Oktober 2026 |
+| Versi | v1.2 |
+| Tanggal | 26 Oktober 2026 |
 | Pemilik | Product |
 | Status | Berlaku |
 
@@ -102,7 +102,7 @@ Setelah final deal berhasil, kedua pihak boleh melihat USN dan IGN satu sama lai
 - Kedua pihak harus menyetujui proposal version dan server type yang sama.
 - `finalizing` melakukan revalidasi, penerapan `fee = 0`, pembentukan immutable deal snapshot, dan reveal entitlement dalam satu transaction boundary.
 - Kegagalan apa pun sebelum commit tidak boleh menghasilkan debit parsial atau reveal identitas.
-- Pra-deal kedaluwarsa setelah 30 menit. Reveal entitlement kedaluwarsa 30 hari setelah finalisasi tanpa menghapus identity snapshot immutable.
+- Pra-deal kedaluwarsa setelah 30 menit. Reveal entitlement kedaluwarsa 30 hari setelah finalisasi; identity snapshot dan entitlement dipangkas setelah 90 hari.
 - Scheduler `trade:expire-phase-four` berjalan setiap menit. Pada `local`, `development`, `staging`, dan `testing`, route admin `/admin/time-controls` menyediakan trigger expiry manual yang diaudit; route tidak didaftarkan pada production.
 - Deal hanya dapat dilihat participant. USN/IGN lawan tetap teredaksi sampai status `revealed` dan entitlement viewer masih aktif.
 
@@ -118,3 +118,13 @@ Callback provider harus diverifikasi signature-nya dan diproses idempotent. Peng
 - Inventory adalah self-declared pada fase awal.
 - Sistem tidak menjamin transaksi di dalam game benar-benar diselesaikan dan tidak mengklaim afiliasi resmi dengan Roblox atau Fisch.
 - CSV invalid atau belum dipublikasikan tidak mengubah snapshot aktif. Snapshot terakhir yang valid tetap digunakan sampai admin menyetujui kandidat baru.
+
+## Operasi production
+
+- Baseline deployment adalah Linux VM dengan Nginx, PHP 8.4-FPM, PostgreSQL 16, systemd scheduler, shared `.env`/storage, dan switch symlink release atomik.
+- `/up` hanya menyatakan proses hidup. `/ready` fail-closed bila PostgreSQL gagal, heartbeat scheduler lebih tua dari tiga menit, storage katalog tidak writable, atau disk bebas kurang dari 2 GB.
+- Semua request memakai correlation ID. Production menulis JSON log ke `stderr` pada level `info`; infrastruktur menyimpan log 30 hari.
+- Monitor eksternal memeriksa `/up` serta `/ready` setiap menit dan mengirim alert setelah dua kegagalan berurutan.
+- Backup PostgreSQL custom-format dan thumbnail dibuat hourly dengan checksum, disimpan 48 hourly dan 14 daily, lalu diuji restore bulanan. RPO satu jam dan RTO empat jam. Launch belum diizinkan sebelum encrypted off-host copy tersedia.
+- `ops:retention` selalu dry-run kecuali diberi `--execute`, dan mutasi tetap membutuhkan `RETENTION_ENABLED=true`. Report open/reviewing serta katalog/value historis tidak dipangkas.
+- Review report awal maksimal 24 jam. `suspected_scam` serta `identity_misuse` diprioritaskan. Tidak ada auto-suspend atau kompensasi no-show; appeal manual dapat membuka review lagi dalam tujuh hari.

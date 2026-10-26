@@ -3,7 +3,7 @@
 | Item | Keterangan |
 |---|---|
 | Dokumen | Roadmap fase development dan audit gap implementasi |
-| Versi | v1.1 |
+| Versi | v1.2 |
 | Tanggal audit | 26 Oktober 2026 |
 | Pemilik | Product dan Engineering |
 | Status | Aktif |
@@ -22,7 +22,7 @@ Target MVP mencakup Fase 0–4 dengan wallet dan fee nonaktif serta `fee = 0`. F
 | 3 — Recommendation & Negotiation | REC-01–REC-06, NEG-01–NEG-07 | Fase 0–2 | Selesai |
 | 4 — Pre-deal, Reveal & Trust Operations | NEG-08, DEL-01–DEL-08, AUD-01–AUD-03, ADM-02, ADM-04–ADM-05 | Fase 0–3 | Selesai |
 | 5 — Wallet, Payment & Dispute Finansial | WAL-01–WAL-06, PAY-01–PAY-05 | Fase 0–4 dan keputusan produk pembayaran | Belum dimulai; bukan gate MVP |
-| 6 — Production Readiness & Launch | Seluruh NFR dan gerbang operasional | Fase 0–4 untuk MVP; Fase 5 untuk monetisasi | Belum siap |
+| 6 — Production Readiness & Launch | Seluruh NFR dan gerbang operasional | Fase 0–4 untuk MVP; Fase 5 untuk monetisasi | Ready for rollout — blocked by off-host backup |
 
 Pemetaan di atas menempatkan seluruh 69 requirement aktif tepat pada satu fase utama. Dependency lintas fase tidak mengubah kepemilikan requirement.
 
@@ -36,7 +36,7 @@ Pemetaan di atas menempatkan seluruh 69 requirement aktif tepat pada satu fase u
 | 3 | Route recommendation, daftar/detail negotiation, start, counter, accept, reject, dan cancel di `routes/web.php`; UI `trade.tsx` dapat dijangkau dari listing discovery | `PhaseThreePageController`, `NegotiationController`, `RecommendationService`, `NegotiationService`, `NegotiationInvalidator`, `PhaseTwoExpiryService` | `PhaseThreeNegotiationTest.php`, `resources/js/tests/trade.test.tsx`, dan E2E negotiation di `player-flow.spec.ts` |
 | 4 | Route/UI server choice, final acceptance, deal/reveal, report, suspension, audit operator, dan time controls admin non-production tersedia | `DealService`, `PhaseFourExpiryService`, controller deal/report/suspension/audit/time-control, middleware operator/suspension, schema deal/reveal | `PhaseThreeNegotiationTest.php`, `ModerationAuditTest.php`, component/E2E trade dan trust operations, serta concurrency PostgreSQL final acceptance |
 | 5 | Tidak ada route atau UI wallet/payment | ADR-005 saja; schema dan domain wallet/payment belum tersedia | Belum ada |
-| 6 | Health route `/up`; belum ada surface operasi production | Workflow CI, harness E2E, benchmark PostgreSQL, audit correlation | Suite terakhir tercatat di memory; belum diulang pada audit roadmap |
+| 6 | `/up`, `/ready`, global correlation/security middleware, scheduler heartbeat, dan command retention | `RetentionService`, konfigurasi operations, artefak Linux VM, CI PostgreSQL, ADR-009, serta runbook operasi | `ProductionReadinessTest.php`, `RetentionServiceTest.php`, suite aplikasi, E2E accessibility, dan benchmark/concurrency PostgreSQL |
 
 ## Fase 0 — Fondasi & Security Baseline
 
@@ -94,7 +94,7 @@ Pemetaan di atas menempatkan seluruh 69 requirement aktif tepat pada satu fase u
 
 **Bukti:** ADR-005 menetapkan arah arsitektur; implementasi schema, service, endpoint, UI, dan test belum tersedia.
 
-**Gap dan blocker:** provider, metode, currency, batas deposit, fee, refund, reconciliation, serta kebijakan dispute belum diputuskan. Fase ini tidak boleh diaktifkan sebagian atau menghambat MVP tanpa pembayaran.
+**Gap dan blocker:** baseline development dipilih berupa gateway mock, IDR, deposit Rp10.000–Rp1.000.000, dan model fee tetap. Provider/metode/settlement production, nominal fee, expiry quote, refund, reconciliation, serta dispute finansial belum diputuskan. Fase ini tidak boleh diaktifkan sebagian atau menghambat MVP tanpa pembayaran.
 
 **Gerbang keluar:** seluruh keputusan produk ditutup; ledger, callback, refund/reversal, compensation, reconciliation, signature validation, dan concurrency test lulus; review keamanan dan runbook insiden tersedia.
 
@@ -102,17 +102,17 @@ Pemetaan di atas menempatkan seluruh 69 requirement aktif tepat pada satu fase u
 
 **Outcome:** capability yang sudah melewati gate fase dapat dirilis dan dioperasikan dengan recovery serta observability yang disetujui.
 
-**Bukti:** workflow CI, correlation ID, audit event, benchmark search, accessibility test, dan harness E2E disposable tersedia.
+**Bukti:** global correlation ID dan security headers, `/up`, fail-closed `/ready`, scheduler heartbeat, JSON stderr production config, retention dry-run/execute, failure-injection test, artefak Nginx/PHP-FPM/systemd/release symlink, backup/checksum/restore drill, CI Linux PostgreSQL, ADR-009, serta runbook operasi tersedia.
 
-**Gap dan blocker:** RPO/RTO, retention, backup/restore drill, monitoring, runbook, dan benchmark PostgreSQL belum selesai. Rollout migration saat ini sudah selesai, tetapi migration berikutnya tetap memerlukan rencana dan otorisasi terpisah.
+**Gap dan blocker:** implementasi repo siap rollout. Launch tetap diblokir karena encrypted off-host backup dan akses host belum tersedia; monitor eksternal juga baru dapat dikonfigurasi dan diuji pada environment nyata. Tidak ada deployment atau migration persisten yang dijalankan pada pekerjaan ini. Migration berikutnya tetap memerlukan rencana dan otorisasi terpisah.
 
-**Gerbang keluar:** dependency terkunci dipulihkan; `composer test`, Vitest, TypeScript, build, Playwright, dan benchmark relevan lulus; migration plan disetujui dan dijalankan terpisah; rollback, monitoring, retention, serta backup/restore tervalidasi.
+**Gerbang keluar:** `composer test`, Vitest, TypeScript, build, Playwright, accessibility, dan benchmark/concurrency relevan lulus; rollback, monitoring, retention, dan restore drill tervalidasi; encrypted off-host backup aktif; migration persisten disetujui terpisah.
 
 ## Urutan backlog
 
-1. Hubungkan Pre-deal, Reveal, dan minimum trust operations dengan privacy/concurrency test.
-2. Verifikasi ulang seluruh Fase 0–4 setelah jalur deal aktif.
-3. Selesaikan production hardening dan rollout MVP Fase 0–4.
-4. Mulai Wallet & Payment hanya setelah seluruh keputusan produk Fase 5 ditutup.
+1. Sediakan akses Linux VM dan encrypted off-host backup, lalu konfigurasi monitor eksternal.
+2. Jalankan restore drill dari off-host copy dan uji alert dua kegagalan berurutan.
+3. Minta otorisasi terpisah untuk migration persisten dan rollout MVP Fase 0–4.
+4. Mulai Wallet & Payment hanya setelah sisa keputusan produk Fase 5 ditutup.
 
 Status fase wajib diperbarui berdasarkan bukti baru. Sebuah fase tidak boleh dinaikkan menjadi selesai hanya karena schema, service, atau UI statis sudah tersedia.

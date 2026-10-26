@@ -1,0 +1,19 @@
+[Unit]
+Description=Fisch Trade Center scheduler
+After=network.target postgresql.service
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/srv/fisch-trade-center/current
+ExecStart=/usr/bin/php artisan schedule:work
+Restart=always
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ReadWritePaths=/srv/fisch-trade-center/shared/storage
+
+[Install]
+WantedBy=multi-user.target

@@ -3,11 +3,11 @@
 | Item | Keterangan |
 |---|---|
 | Dokumen | PRD — Fisch Trade Center |
-| Versi | v1.6 (Expiry dan kontrol waktu Fase 4) |
+| Versi | v1.7 (Production readiness) |
 | Tanggal | 26 Oktober 2026 |
 | Disusun oleh | Product |
 | Audiens | Product Owner, Engineering, Design, QA, dan Operations |
-| Status | Target MVP Fase 0–4; monetisasi Fase 5 tetap tertahan keputusan produk |
+| Status | MVP Fase 0–4 siap rollout; launch diblokir backup off-host dan akses host |
 
 | Item | Keterangan |
 |---|---|
@@ -224,7 +224,7 @@ Prioritas: `M` Must, `S` Should, `C` Could, dan `W` Won't untuk cakupan rilis sa
 | DEL-07 | **Retry dan final acceptance bersamaan bersifat idempotent.** Semua caller menerima hasil deal yang sama tanpa debit atau reveal tambahan. | M |
 | DEL-08 | **Sistem menyatakan jelas bahwa trade in-game tidak dijamin dan item tidak di-escrow.** Pernyataan tampil sebelum final acceptance. | M |
 
-Pra-deal kedaluwarsa 30 menit setelah pilihan server dibuat. Entitlement untuk melihat identity snapshot lawan berlaku 30 hari setelah deal `revealed`; berakhirnya entitlement tidak menghapus snapshot immutable. Scheduler memproses kedua batas ini. Pada environment `local`, `development`, `staging`, dan `testing`, administrator dapat memicu expiry pra-deal atau entitlement reveal secara manual dari halaman khusus yang diaudit. Route tersebut tidak didaftarkan pada production.
+Pra-deal kedaluwarsa 30 menit setelah pilihan server dibuat. Entitlement untuk melihat identity snapshot lawan berlaku 30 hari setelah deal `revealed`; identity snapshot dan entitlement dipangkas setelah 90 hari sesuai kebijakan retensi. Scheduler memproses batas akses ini. Pada environment `local`, `development`, `staging`, dan `testing`, administrator dapat memicu expiry pra-deal atau entitlement reveal secara manual dari halaman khusus yang diaudit. Route tersebut tidak didaftarkan pada production.
 
 ### 7.9 Wallet dan ledger
 
@@ -316,8 +316,8 @@ Seluruh integrasi eksternal berada di server. Kegagalan integrasi tidak boleh me
 | Privacy | USN/IGN tidak muncul pada response lawan, event analytics, atau log sebelum reveal; diuji otomatis. |
 | Accessibility | Alur utama memenuhi WCAG 2.2 AA untuk keyboard, focus, label, contrast, dan error announcement. |
 | Responsive UI | Alur utama berfungsi pada viewport 360 px sampai desktop 1440 px tanpa horizontal overflow yang menghalangi aksi. |
-| Observability | 100% finalization, payment callback, import publish/fail, dan admin configuration change mempunyai correlation ID dan audit event. |
-| Recovery | Backup/restore target ditetapkan sebelum production; sementara itu production launch tertahan. |
+| Observability | Setiap request mempunyai correlation ID; finalization, payment callback, import publish/fail, dan admin configuration change mempunyai correlation ID serta audit event. Log production JSON ke `stderr`, level `info`, retensi 30 hari. Monitor eksternal memeriksa `/up` dan `/ready` tiap menit dan alert setelah dua kegagalan. |
+| Recovery | RPO 1 jam dan RTO 4 jam. Backup PostgreSQL plus thumbnail dibuat hourly, disimpan 48 hourly/14 daily, diverifikasi checksum, dan diuji restore bulanan. Launch tertahan sampai encrypted off-host copy tersedia. |
 
 ## 12. Tahapan Rilis
 
@@ -329,7 +329,7 @@ Seluruh integrasi eksternal berada di server. Kegagalan integrasi tidak boleh me
 | Fase 3 — Recommendation & Negotiation | Rekomendasi inventory dan negotiation terstruktur sampai proposal diterima. | REC-01–REC-06, NEG-01–NEG-07 | Route/UI operasional; stale version, invalidation, expiry, authorization, dan concurrency test lulus. |
 | Fase 4 — Pre-deal, Reveal & Trust Operations | Pilihan server, final deal `fee = 0`, reveal terbatas, report, suspension, dan audit operator. | NEG-08, DEL-01–DEL-08, AUD-01–AUD-03, ADM-02, ADM-04–ADM-05 | Tidak ada reveal prematur; finalisasi/retry atomik; disclaimer tampil; minimum trust operations tersedia. |
 | Fase 5 — Wallet, Payment & Dispute Finansial | Deposit, ledger, fee, callback, refund/compensation, dan dispute finansial. | WAL-01–WAL-06, PAY-01–PAY-05 | Keputusan pembayaran ditutup; review keamanan, reconciliation, idempotency, dan runbook insiden lulus. |
-| Fase 6 — Production Readiness & Launch | Migration rollout, observability, retention, backup/restore, monitoring, dan runbook. | Seluruh NFR dan gerbang operasional | Suite lengkap lulus; RPO/RTO dan retention disetujui; rollout serta rollback tervalidasi. |
+| Fase 6 — Production Readiness & Launch | Migration rollout, observability, retention, backup/restore, monitoring, dan runbook. | Seluruh NFR dan gerbang operasional | Ready for rollout; launch tetap diblokir sampai backup off-host dan akses host tersedia. |
 
 Target MVP berakhir pada Fase 4 dengan wallet dan fee nonaktif. Fase 5 tidak menghambat MVP selama UI menyatakan biaya nol secara jelas. Detail status, bukti, gap, dan backlog setiap fase berada di [`development-phases.md`](../development-phases.md). Fase tidak boleh dilompati hanya karena UI atau service berikutnya tersedia.
 
@@ -351,14 +351,14 @@ Ukuran conversion belum diberi target numerik sebelum baseline karena angka tanp
 
 | No | Pertanyaan | Pemutus | Yang tertahan | Prioritas |
 |---|---|---|---|---|
-| 1 | Payment provider, metode, mata uang, minimum/maksimum deposit, dan settlement mana yang digunakan? | Product Owner + Finance + Engineering | PAY-02 sampai PAY-05 dan aktivasi Fase 5 | Tinggi |
-| 2 | Berapa fee per pihak, kapan quote kedaluwarsa, serta kapan refund diberikan? | Product Owner + Finance | DEL-03 sampai DEL-05, WAL-02, kebijakan dispute | Tinggi |
+| 1 | Provider/metode/settlement production mana yang digunakan? Baseline development Fase 5 telah dipilih: gateway mock, IDR, deposit Rp10.000–Rp1.000.000. | Product Owner + Finance + Engineering | PAY-02 sampai PAY-05 dan aktivasi production Fase 5 | Tinggi |
+| 2 | Berapa nominal fee tetap per pihak, kapan quote kedaluwarsa, serta kapan refund diberikan? Model fee telah dipilih tetap, tetapi nominal dan kebijakan finansial belum diputuskan. | Product Owner + Finance | DEL-03 sampai DEL-05, WAL-02, kebijakan dispute | Tinggi |
 | 3 | ~~Berapa nilai awal `fair_threshold_percent` dan siapa yang menyetujui perubahannya?~~ | Tertutup 24 Oktober 2026: nilai awal ±10%; admin boleh mengubah secara prospektif dan setiap perubahan wajib diaudit. | REC-04 | Tinggi |
 | 4 | ~~Berapa expiry listing, proposal, negotiation, pra-deal, dan identity reveal access?~~ | Tertutup 26 Oktober 2026: listing = 14 hari, proposal = 24 jam, negotiation = 7 hari, pra-deal = 30 menit, dan identity reveal access = 30 hari. Environment non-production menyediakan trigger expiry manual khusus admin untuk pengujian; production tidak mendaftarkan route tersebut. | NEG-06, DEL-03 | Sedang |
-| 5 | Bagaimana report, no-show, scam allegation, suspend, dispute, refund, dan appeal ditangani? | Product Owner + Operations + Legal | ADM-04, ADM-05, production monetization | Tinggi |
+| 5 | ~~Bagaimana report, no-show, scam allegation, suspend, dan appeal non-finansial ditangani?~~ | Tertutup 26 Oktober 2026: review awal maksimal 24 jam; scam/identity misuse diprioritaskan; tidak ada auto-suspend; no-show tidak memberi kompensasi; appeal manual tujuh hari. Dispute/refund finansial tetap pada keputusan No. 2 dan Fase 5. | ADM-04, ADM-05 | Tinggi |
 | 6 | ~~Bagaimana sumber katalog, value, metadata Rod, dan gambar diperbarui?~~ | Tertutup 25 Oktober 2026: admin mengunggah CSV partial-upsert ke staging dan memublikasikannya manual; Rod serta thumbnail dikelola terpisah di admin. Tidak ada fetch atau scheduler sumber eksternal. | CAT-03 sampai CAT-06 | Tinggi |
-| 7 | Berapa retensi audit, proposal, identity snapshot, payment event, dan data akun setelah penghapusan akun? | Product Owner + Legal + Security | AUD-02, privacy policy, production launch | Tinggi |
-| 8 | Berapa target RPO/RTO dan strategi backup/restore produksi? | Engineering + Product Owner | Gerbang Fase 6 | Sedang |
+| 7 | ~~Berapa retensi audit, proposal, identity snapshot, payment event, dan data akun setelah penghapusan akun?~~ | Tertutup 26 Oktober 2026: identity/reveal 90 hari; report selesai dan negotiation terminal tanpa deal 180 hari; deal graph, suspension selesai, dan audit satu tahun; value/katalog historis dipertahankan; penghapusan akun tidak tersedia pada MVP. Payment event diputuskan saat Fase 5. | AUD-02, privacy policy | Tinggi |
+| 8 | ~~Berapa target RPO/RTO dan strategi backup/restore produksi?~~ | Tertutup 26 Oktober 2026: RPO 1 jam, RTO 4 jam; backup hourly PostgreSQL custom-format dan thumbnail dengan checksum, 48 hourly/14 daily, restore drill bulanan, encrypted off-host copy wajib sebelum launch. | Gerbang Fase 6 | Sedang |
 
 Setelah diputuskan, baris tidak dihapus. Pertanyaan dicoret dan kolom Pemutus diganti dengan `Tertutup [tanggal]: [keputusan dan alasan]`; keputusan arsitektur yang mahal dibalik naik menjadi ADR baru.
 
