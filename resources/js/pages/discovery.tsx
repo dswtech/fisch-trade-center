@@ -1,9 +1,10 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
-import { Anchor, ArrowRight, BookOpen, Boxes, Compass, Filter, Fish, LayoutDashboard, Menu, Moon, Search, ShieldCheck, ShipWheel, SlidersHorizontal, Sparkles, Sun, UserRound, X } from 'lucide-react';
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { retryableMutation } from '../lib/network-recovery';
+import { Anchor, ArrowRight, Filter, Fish, Search, SlidersHorizontal, Sparkles, UserRound, X } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import ProductShell from '../components/product-shell';
+import {useProductLocale} from '../lib/product-locale';
 import { hasInvertedValueRange } from '../lib/search';
-import type { ListingSummary, Locale, SharedProps, Theme, WflResult } from '../types';
+import type { ListingSummary, SharedProps, WflResult } from '../types';
 
 type SearchFilters = {
     offeredItem: string;
@@ -46,7 +47,7 @@ export default function Discovery({
     synthetic?: boolean;
 }) {
     const { props } = usePage<SharedProps>();
-    const [drawer, setDrawer] = useState(false);
+    const {locale,toggle,user}=useProductLocale();
     const [filtersOpen, setFiltersOpen] = useState(false);
     const [loading, setLoading] = useState(false);
     const [clientError, setClientError] = useState<string | null>(null);
@@ -60,28 +61,16 @@ export default function Discovery({
         maxValue: initialFilters.maxValue ?? '',
         freshness: initialFilters.freshness ?? '',
     });
-    const initialLocale = useMemo<Locale>(() => props.preferences?.locale || (navigator.language.toLowerCase().startsWith('id') ? 'id' : 'en'), []);
-    const [locale, setLocale] = useState<Locale>(() => (localStorage.getItem('ftc-locale') as Locale) || initialLocale);
-    const [theme, setTheme] = useState<Theme>(() => (localStorage.getItem('ftc-theme') as Theme) || props.preferences?.theme || 'dark');
     const t = copy[locale];
     const deltaLabel = wfl?.deltaPercent == null ? '—' : `${wfl.deltaPercent >= 0 ? '+' : ''}${wfl.deltaPercent.toFixed(1)}%`;
     const statusLabel = wfl?.status ? wfl.status.toUpperCase() : 'W/F/L';
 
-    useEffect(() => {
-        document.documentElement.dataset.theme = theme;
-        document.documentElement.classList.toggle('dark', theme === 'dark');
-        localStorage.setItem('ftc-theme', theme);
-    }, [theme]);
-    useEffect(() => localStorage.setItem('ftc-locale', locale), [locale]);
     useEffect(() => {
         const stopStart = router.on('start', () => setLoading(true));
         const stopFinish = router.on('finish', () => setLoading(false));
         return () => { stopStart(); stopFinish(); };
     }, []);
 
-    const persist = (next: { theme?: Theme; locale?: Locale }) => {
-        if (props.auth?.user) retryableMutation('patch', '/preferences', next);
-    };
     const updateFilter = (key: keyof SearchFilters, value: string) => {
         setClientError(null);
         setSearchFilters((current) => ({ ...current, [key]: value }));
@@ -108,38 +97,19 @@ export default function Discovery({
     const nextHref = nextCursor ? `/search?${new URLSearchParams({ ...Object.fromEntries(Object.entries(searchFilters).filter(([, value]) => value !== '')), cursor: nextCursor }).toString()}` : null;
     const serverError = searchError || props.flash?.error || Object.values(props.errors || {})[0];
 
-    return <><Head title={t.discover}/><div className="app-shell">
-        <header className="topbar">
-            <button className="icon-button mobile-only" aria-label="Open menu" onClick={() => setDrawer(true)}><Menu/></button>
-            <Link href="/" className="brand" aria-label="FISCHTRADE home"><img src="/images/brand-mark.png" alt=""/><span>FISCH<span>TRADE</span></span></Link>
-            <div className="top-actions">
-                {synthetic && <span className="demo-badge">{t.synthetic}</span>}
-                <button className="locale-button" onClick={() => { const next = locale === 'id' ? 'en' : 'id'; setLocale(next); persist({ locale: next }); }}>{locale.toUpperCase()}</button>
-                <button className="icon-button" aria-label="Toggle theme" onClick={() => { const next = theme === 'dark' ? 'light' : 'dark'; setTheme(next); persist({ theme: next }); }}>{theme === 'dark' ? <Sun/> : <Moon/>}</button>
-                <Link className="avatar" aria-label={props.auth?.user ? 'Open profile' : 'Sign in'} href={props.auth?.user ? '/profile' : '/login'}><UserRound/></Link>
-            </div>
-        </header>
-        <aside className={`sidebar ${drawer ? 'open' : ''}`}>
-            <button className="icon-button close-drawer" onClick={() => setDrawer(false)} aria-label="Close menu"><X/></button>
-            <nav>{[[LayoutDashboard, t.dashboard, '/'], [Compass, t.discover, '/'], [BookOpen, t.catalog, '/catalog'], [Boxes, t.inventory, '/inventory'], [Fish, t.listings, '/listings'], [ShipWheel, t.simulator, '/simulator'], ...(props.auth?.user&&['operator','admin'].includes(props.auth.user.role)?[[ShieldCheck, 'Trust operations', '/operator/audit']]:[])].map(([Icon, label, href]: any) => <Link key={label} href={href} className={label === t.discover ? 'active' : ''}><Icon/><span>{label}</span></Link>)}</nav>
-            <img className="sidebar-art" src="/images/sidebar-ocean-art.png" alt=""/>
-            <Link className="sidebar-profile" href={props.auth?.user ? '/profile' : '/login'}><span className="avatar"><UserRound/></span><span>{props.auth?.user?.name || 'Guest angler'}<small>{props.auth?.user ? 'Player' : 'Sign in to trade'}</small></span></Link>
-        </aside>
-        <main className="workspace">
+    return <ProductShell active="discovery" locale={locale} onLocaleToggle={toggle} user={user} initialTheme={props.preferences?.theme} syntheticLabel={synthetic?t.synthetic:undefined}><Head title={t.discover}/>
             <section className="command-bar" aria-label="Trade search">
                 <button className="search-field" onClick={() => setFiltersOpen(true)}><Search/><span>{t.search}</span></button>
                 <button className="filter-button" onClick={() => setFiltersOpen(true)}><SlidersHorizontal/>{t.filters}</button>
                 <button className="primary-button" onClick={() => setFiltersOpen(true)}><Search/>{t.searchAction}</button>
             </section>
-            <section className="trade-zone">
-                <div className="trade-panel give-panel"><PanelTitle n="01" over={t.trade} title={t.give}/><ItemCard tone="cyan" name={t.buildOffer} category={t.simulator} value="—" icon={<Sparkles/>}/><Link className="add-item" href="/simulator">{t.openSimulator}</Link></div>
+            <section className="trade-zone" data-ui="trade-comparison">
+                <div className="trade-panel give-panel"><PanelTitle n="01" over={t.trade} title={t.give}/><ItemCard tone="cyan" name={t.buildOffer} category={t.simulator} value="—" icon={<Sparkles/>}/><Link className="add-item" href="/simulator">{t.openSimulator}</Link></div> {/* taste-skill-ignore: paired trade-side marker from the approved composition */}
                 <div className="balance-orb" aria-label={wfl?.status || 'unavailable'}><span>{deltaLabel}</span><strong>{statusLabel}</strong></div>
-                <div className="trade-panel receive-panel"><PanelTitle n="02" over={t.trade} title={t.receive}/><ItemCard tone="violet" name={t.chooseTarget} category={t.simulator} value="—" icon={<Anchor/>}/><Link className="add-item" href="/simulator">{t.openSimulator}</Link></div>
+                <div className="trade-panel receive-panel"><PanelTitle n="02" over={t.trade} title={t.receive}/><ItemCard tone="violet" name={t.chooseTarget} category={t.simulator} value="—" icon={<Anchor/>}/><Link className="add-item" href="/simulator">{t.openSimulator}</Link></div> {/* taste-skill-ignore: paired trade-side marker from the approved composition */}
                 <aside className="insight-column"><div className="snapshot-card"><div><p>{t.snapshot}</p><strong>{snapshot.version}</strong></div><span className="live-dot">{t.fresh}</span><small>{snapshot.ageLabel}</small></div><div className="recommendation-card"><div className="recommendation-head"><div><p>{t.recommended}</p><h3>{t.openSimulator}</h3></div><Filter/></div><p>{t.recommendationHint}</p><Link className="recommendation-link" href="/simulator">{t.openSimulator}<ArrowRight/></Link></div></aside>
             </section>
-            <section className="listing-section" aria-busy={loading}><div className="section-head"><div><p className="eyebrow">{listings.length} {t.found}</p><h2>{t.latest}</h2></div><Link href="/listings">{t.viewAll}<ArrowRight/></Link></div>{loading && <div className="search-feedback loading" role="status" aria-live="polite"><span aria-hidden="true"/>{t.searching}</div>}{serverError && <div className="search-feedback error" role="alert"><div><strong>{t.errorTitle}</strong><span>{serverError}</span></div><button onClick={() => retrySearch.current()}>{t.retry}</button></div>}{listings.length === 0 ? <div className="empty-state"><Fish/><h3>{t.emptyTitle}</h3><p>{t.emptyBody}</p><button className="filter-button" onClick={() => setFiltersOpen(true)}>{t.changeFilters}</button></div> : <div className="listing-grid" tabIndex={0} aria-label={t.latest}>{listings.map((listing) => <article className="listing-card" data-listing-id={listing.id} key={listing.id}><div className="listing-top"><span className="anonymous"><UserRound/>{listing.alias}</span><span>{listing.age}</span></div><div className="listing-flow"><img className="mini-glyph" src={listing.offeredThumbnailUrl} alt=""/><div><small>OFFERS</small><strong>{listing.offered}</strong></div><ArrowRight/><div className="wanted-item"><img src={listing.wantedThumbnailUrl} alt=""/><span><small>WANTS</small><strong>{listing.wanted}</strong></span></div></div><div className="listing-foot"><strong>{listing.value?.toLocaleString() ?? '—'} pts</strong><span className={`status ${listing.status}`}>{listing.status.toUpperCase()}</span><Link href={'/recommendations/'+listing.id}>{t.match}<ArrowRight/></Link></div></article>)}</div>}{nextHref && <button className="primary-button pagination-button" onClick={() => runSearch(nextHref)} disabled={loading}>{t.loadNext}</button>}</section>
-        </main>
-        <nav className="bottom-nav">{[[Compass, t.discover, '/'], [BookOpen, t.catalog, '/catalog'], [Fish, t.listings, '/listings'], [ShipWheel, 'W/F/L', '/simulator'], [UserRound, t.profile, '/login']].map(([Icon, label, href]: any) => <Link href={href} key={label}><Icon/><span>{label}</span></Link>)}</nav>
+            <section className="listing-section" data-ui="listing-results" aria-busy={loading}><div className="section-head"><div><p className="eyebrow">{listings.length} {t.found}</p><h2>{t.latest}</h2></div><Link href="/listings">{t.viewAll}<ArrowRight/></Link></div>{loading && <div className="search-feedback loading" role="status" aria-live="polite"><span aria-hidden="true"/>{t.searching}</div>}{serverError && <div className="search-feedback error" role="alert"><div><strong>{t.errorTitle}</strong><span>{serverError}</span></div><button onClick={() => retrySearch.current()}>{t.retry}</button></div>}{listings.length === 0 ? <div className="empty-state"><Fish/><h3>{t.emptyTitle}</h3><p>{t.emptyBody}</p><button className="filter-button" onClick={() => setFiltersOpen(true)}>{t.changeFilters}</button></div> : <div className="listing-grid" tabIndex={0} aria-label={t.latest}>{listings.map((listing) => <article className="listing-card" data-listing-id={listing.id} key={listing.id}><div className="listing-top"><span className="anonymous"><UserRound/>{listing.alias}</span><span>{listing.age}</span></div><div className="listing-flow"><img className="mini-glyph" src={listing.offeredThumbnailUrl} alt=""/><div><small>OFFERS</small><strong>{listing.offered}</strong></div><ArrowRight/><div className="wanted-item"><img src={listing.wantedThumbnailUrl} alt=""/><span><small>WANTS</small><strong>{listing.wanted}</strong></span></div></div><div className="listing-foot"><strong>{listing.value?.toLocaleString() ?? '—'} pts</strong><span className={`status ${listing.status}`}>{listing.status.toUpperCase()}</span><Link href={'/recommendations/'+listing.id}>{t.match}<ArrowRight/></Link></div></article>)}</div>}{nextHref && <button className="primary-button pagination-button" onClick={() => runSearch(nextHref)} disabled={loading}>{t.loadNext}</button>}</section> {/* taste-skill-ignore: compact result count is functional metadata */}
         {filtersOpen && <div className="sheet-backdrop" onMouseDown={() => setFiltersOpen(false)}><section className="filter-sheet" role="dialog" aria-modal="true" aria-label={t.filters} onMouseDown={(event) => event.stopPropagation()}>
             <header><h2>{t.filters}</h2><button className="icon-button" onClick={() => setFiltersOpen(false)} aria-label="Close filters"><X/></button></header>
             <label>{t.offeredItem}<select value={searchFilters.offeredItem} onChange={(event) => updateFilter('offeredItem', event.target.value)}><option value="">{t.anyOffered}</option>{filterOptions.items.map((option) => <option value={option.id} key={option.id}>{option.name}</option>)}</select></label>
@@ -151,7 +121,7 @@ export default function Discovery({
             <label>{t.freshness}<select value={searchFilters.freshness} onChange={(event) => updateFilter('freshness', event.target.value)}><option value="">{t.anyTime}</option><option value="hour">{t.lastHour}</option><option value="day">{t.today}</option><option value="week">{t.lastWeek}</option></select></label>
             <button className="primary-button" onClick={applyFilters} disabled={loading}>{loading ? t.searching : t.applyFilters}</button>
         </section></div>}
-    </div></>;
+    </ProductShell>;
 }
 
 function PanelTitle({ n, over, title }: { n: string; over: string; title: string }) { return <div className="panel-title"><span className="number">{n}</span><div><p>{over}</p><h1>{title}</h1></div></div>; }

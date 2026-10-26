@@ -44,11 +44,27 @@ test('verified player completes profile, inventory, and listing flow without ide
 
 test('simulator reports fair for equal catalog items',async({page})=>{
   await page.goto('/simulator');
+  const resultBox=await page.locator('.sim-result').boundingBox();
+  expect(resultBox).not.toBeNull();
+  expect(resultBox!.width).toBeLessThanOrEqual(152);
+  expect(Math.abs(resultBox!.width-resultBox!.height)).toBeLessThanOrEqual(2);
+  const overflow=await page.evaluate(()=>document.documentElement.scrollWidth-document.documentElement.clientWidth);
+  expect(overflow).toBeLessThanOrEqual(1);
   await page.getByLabel('You give').selectOption({label:'Abyssal Current'});
   await page.getByLabel('You receive').selectOption({label:'Abyssal Current'});
   await page.getByRole('button',{name:/Calculate with active snapshot/}).click();
   await expect(page.locator('.sim-result')).toContainText('fair');
   await expect(page.locator('.sim-result')).toContainText('0.00%');
+});
+
+test('player menu pages retain the primary application shell',async({page})=>{
+  for(const path of ['/catalog','/inventory','/my-listings','/simulator','/profile','/negotiations']){
+    await page.goto(path);
+    await expect(page.locator('.topbar')).toHaveCount(1);
+    await expect(page.locator('.sidebar')).toHaveCount(1);
+    await expect(page.locator('.module-header')).toHaveCount(0);
+    await expect(page.locator('.module-nav')).toHaveCount(0);
+  }
 });
 
 test('player starts an anonymous negotiation from a live recommendation',async({page})=>{
@@ -140,6 +156,8 @@ test('administrator reaches the trust operations queue',async({page})=>{
   }
   await page.getByRole('link',{name:'Trust operations'}).click();
   await expect(page).toHaveURL('/operator/audit');
+  await expect(page.locator('.topbar')).toHaveCount(1);
+  await expect(page.locator('.sidebar')).toHaveCount(1);
   await expect(page.getByRole('heading',{name:'Trust operations'})).toBeVisible();
   await expect(page.getByText('No structured reports have been submitted.')).toBeVisible();
   await page.goto('/admin');

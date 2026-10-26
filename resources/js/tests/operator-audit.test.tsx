@@ -8,6 +8,10 @@ vi.mock('@inertiajs/react',()=>({
  Form:({children,action,method,className}:any)=><form action={action} method={method} className={className}>{typeof children==='function'?children({processing:false,errors:{},submit:vi.fn()}):children}</form>,
 }));
 
+vi.mock('../lib/product-locale',()=>({
+ useProductLocale:()=>({locale:'en',toggle:vi.fn(),user:{id:'admin-1',name:'FTC Admin',emailVerified:true,role:'admin'}}),
+}));
+
 import OperatorAudit from '../pages/operator-audit';
 
 describe('operator trust operations',()=>{

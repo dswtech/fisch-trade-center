@@ -1,5 +1,6 @@
 import {Head,Link} from '@inertiajs/react';
-import {AlertTriangle,Anchor,ArrowLeft,Check,Clock,Flag,Languages,LockKeyhole,RefreshCw,Send,Server,ShieldCheck,X} from 'lucide-react';
+import {AlertTriangle,Anchor,Check,Clock,Flag,LockKeyhole,RefreshCw,Send,Server,ShieldCheck,X} from 'lucide-react';
+import ProductShell from '../components/product-shell';
 import ResilientForm from '../components/resilient-form';
 import {useProductLocale} from '../lib/product-locale';
 import type {DealSummary,NegotiationSummary,ProposalSummary,Recommendation,TradeItem} from '../types';
@@ -30,10 +31,10 @@ const copy={
 };
 
 export default function Trade(props:Props){
- const {locale,toggle}=useProductLocale();const t=copy[locale];
+ const {locale,toggle,user}=useProductLocale();const t=copy[locale];
  const title=props.section==='recommendations'?t.recommendations:props.section==='deal'?t.deal:t.negotiations;
  const error=Object.values(props.errors||{})[0];
- return <main className="module-page"><Head title={title}/><header className="module-header"><Link href="/" className="module-brand" aria-label="FISCH TRADE home"><img src="/images/brand-mark.png" alt=""/><span>FISCH <b>TRADE</b></span></Link><div className="module-utilities"><button className="locale-button" onClick={toggle} title="Change language"><Languages/>{locale.toUpperCase()}</button><Link className="back-link" href="/"><ArrowLeft/>{t.back}</Link></div></header><div className="trade-flow-shell"><header className="trade-flow-heading"><div><h1>{title}</h1><p>{t.noChat}</p></div>{props.negotiation&&<StateBadge value={props.negotiation.status}/>}</header>{error&&<p className="search-feedback error" role="alert">{error}</p>}{props.section==='recommendations'&&<Recommendations listing={props.listing} rows={props.recommendations||[]} missingItems={props.missingItems||[]} t={t}/>} {props.section==='negotiations'&&<NegotiationList rows={props.negotiations||[]} t={t}/>} {props.section==='negotiation'&&props.negotiation&&<NegotiationRoom negotiation={props.negotiation} proposals={props.proposals||[]} preDeal={props.preDeal} entries={props.entries||[]} reports={props.reports||[]} reportingEnabled={props.reportingEnabled??false} t={t}/>} {props.section==='deal'&&props.deal&&<DealView deal={props.deal} t={t}/>}</div></main>;
+ return <ProductShell active="negotiations" locale={locale} onLocaleToggle={toggle} user={user}><Head title={title}/><div className="trade-flow-shell"><header className="trade-flow-heading"><div><h1>{title}</h1><p>{t.noChat}</p></div>{props.negotiation&&<StateBadge value={props.negotiation.status}/>}</header>{error&&<p className="search-feedback error" role="alert">{error}</p>}{props.section==='recommendations'&&<Recommendations listing={props.listing} rows={props.recommendations||[]} missingItems={props.missingItems||[]} t={t}/>} {props.section==='negotiations'&&<NegotiationList rows={props.negotiations||[]} t={t}/>} {props.section==='negotiation'&&props.negotiation&&<NegotiationRoom negotiation={props.negotiation} proposals={props.proposals||[]} preDeal={props.preDeal} entries={props.entries||[]} reports={props.reports||[]} reportingEnabled={props.reportingEnabled??false} t={t}/>} {props.section==='deal'&&props.deal&&<DealView deal={props.deal} t={t}/>}</div></ProductShell>;
 }
 
 function StateBadge({value}:{value:string}){const tone=['accepted','revealed','resolved'].includes(value)?'win':['rejected','cancelled','expired','invalidated','failed'].includes(value)?'lose':'fair';return <span className={'status '+tone}>{value.replaceAll('_',' ').toUpperCase()}</span>}

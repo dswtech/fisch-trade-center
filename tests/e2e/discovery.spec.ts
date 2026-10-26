@@ -31,6 +31,16 @@ test('keyboard reaches a visible interactive control',async({page})=>{
   await expect(page.locator(':focus')).not.toHaveCSS('outline-style','none');
 });
 
+test('wide discovery centers the balance orb on the give and receive boundary',async({page})=>{
+  await page.setViewportSize({width:1800,height:1000});
+  await page.goto('/');
+  const give=await page.locator('.give-panel').boundingBox();
+  const orb=await page.locator('.balance-orb').boundingBox();
+  expect(give).not.toBeNull();
+  expect(orb).not.toBeNull();
+  expect(Math.abs((give!.x+give!.width)-(orb!.x+orb!.width/2))).toBeLessThanOrEqual(3);
+});
+
 test('combined filters expose loading state and continue with a deterministic cursor',async({page})=>{
   await page.goto('/search');
   await page.getByRole('button',{name:/Filters|Filter/}).click();
