@@ -113,3 +113,9 @@
 ## Cara memperbarui memory
 
 Ubah hanya berdasarkan hasil yang benar-benar terjadi. Catat tanggal, fitur yang berubah, test beserta hasilnya, keputusan baru, blocker, dan next step. Hapus fakta yang sudah tidak berlaku atau pindahkan keputusan arsitektur yang mahal dibalik ke ADR baru.
+
+## Rencana tertunda — counteroffer
+
+- Pada 27 Oktober 2026, pengguna menyetujui rancangan counteroffer yang memakai composer dua sisi seperti pembuatan proposal: sisi pengguna editable, sisi lawan read-only, W/F/L langsung, picker inventory bergambar, dan submit melalui modal ringkasan.
+- Draft `LOSE` dapat dikirim sebagai permintaan non-binding `request_more_items`. Penerima tidak dapat Accept; ia hanya dapat menambah item dan membalas melalui counteroffer atau menolak permintaan.
+- Rencana lengkap tersimpan di [`counteroffer-ux-plan.md`](counteroffer-ux-plan.md). Belum ada kode, migration, atau test yang diubah untuk rencana ini.
