@@ -126,7 +126,7 @@
 
 ## Next step
 
-1. Review lalu commit/push redesign simulator, katalog, dan Discovery dua kolom yang masih berada di working tree jika pengguna memerintahkannya.
+1. Redesign simulator, katalog, Discovery dua kolom, counteroffer, dan popover tindakan trade telah dipush ke `origin/main` sebagai commit `d034471` (`feat: refine trade discovery and negotiation experience`).
 2. Sediakan akses Linux VM, encrypted off-host backup, dan provider-neutral monitor; jalankan restore drill dari off-host copy.
 3. Migration persisten dan deployment nyata tetap hanya boleh dijalankan setelah pengguna memberi instruksi eksplisit.
 4. Fase 5 tetap tidak dimulai sebelum sisa keputusan provider, nominal fee, refund, dan reconciliation ditutup.
