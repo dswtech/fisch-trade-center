@@ -1,5 +1,6 @@
 <?php
 
+use App\Domain\Trade\MarketInsightService;
 use App\Models\Listing;
 use Illuminate\Contracts\Console\Kernel;
 use Illuminate\Database\Eloquent\Builder;
@@ -82,6 +83,19 @@ foreach ($scenarios as $name => $query) {
     $results[$name] = ['p50_ms' => round($durations[24], 2), 'p95_ms' => round($durations[47], 2), 'max_ms' => round(max($durations), 2)];
 }
 
-$maximumP95 = max(array_column($results, 'p95_ms'));
-echo json_encode(['listings' => 100000, 'samples_per_scenario' => 50, 'target_ms' => 1000, 'maximum_p95_ms' => $maximumP95, 'scenarios' => $results], JSON_PRETTY_PRINT | JSON_THROW_ON_ERROR).PHP_EOL;
+$marketInsights = app(MarketInsightService::class);
+for ($warmup = 0; $warmup < 5; $warmup++) {
+    $marketInsights->summary();
+}
+$marketDurations = [];
+for ($sample = 0; $sample < 20; $sample++) {
+    $started = hrtime(true);
+    $marketInsights->summary();
+    $marketDurations[] = (hrtime(true) - $started) / 1_000_000;
+}
+sort($marketDurations);
+$marketResult = ['p50_ms' => round($marketDurations[9], 2), 'p95_ms' => round($marketDurations[18], 2), 'max_ms' => round(max($marketDurations), 2)];
+
+$maximumP95 = max(max(array_column($results, 'p95_ms')), $marketResult['p95_ms']);
+echo json_encode(['listings' => 100000, 'samples_per_scenario' => 50, 'market_samples' => 20, 'target_ms' => 1000, 'maximum_p95_ms' => $maximumP95, 'scenarios' => $results, 'market_insights' => $marketResult], JSON_PRETTY_PRINT | JSON_THROW_ON_ERROR).PHP_EOL;
 exit($maximumP95 <= 1000 ? 0 : 1);

@@ -3,8 +3,8 @@
 | Item | Keterangan |
 |---|---|
 | Dokumen | PRD — Fisch Trade Center |
-| Versi | v1.7 (Production readiness) |
-| Tanggal | 26 Oktober 2026 |
+| Versi | v1.11 (counteroffer terstruktur) |
+| Tanggal | 27 Oktober 2026 |
 | Disusun oleh | Product |
 | Audiens | Product Owner, Engineering, Design, QA, dan Operations |
 | Status | MVP Fase 0–4 siap rollout; launch diblokir backup off-host dan akses host |
@@ -13,7 +13,7 @@
 |---|---|
 | Induk | Tidak ada — dokumen produk utama |
 | Cakupan | Trade discovery sampai final deal, serta fase wallet dan pembayaran |
-| Requirement | 69 aktif |
+| Requirement | 76 aktif |
 | Prasyarat | Sumber katalog/value yang dapat digunakan; keputusan pembayaran sebelum Fase 5 |
 | Aturan ID | ID tidak boleh digunakan ulang dan hanya didefinisikan dalam dokumen ini |
 
@@ -156,6 +156,7 @@ Prioritas: `M` Must, `S` Should, `C` Could, dan `W` Won't untuk cakupan rilis sa
 | CAT-04 | **Import memvalidasi header, tipe, key, duplikasi, kategori, status, formula injection, dan presisi value sebelum publikasi.** Perubahan value di atas 25% menjadi warning yang memerlukan konfirmasi; import invalid tidak mengganti snapshot aktif. | M |
 | CAT-05 | **Admin memublikasikan import valid secara atomik menjadi perubahan katalog dan snapshot value lengkap yang immutable.** Baris yang tidak diunggah dipertahankan dan value kosong menghapus value item pada snapshot baru. | M |
 | CAT-06 | **Admin dapat mengelola relasi Rod dan thumbnail item secara manual.** Thumbnail hanya JPG/PNG/WebP maksimal 2 MB; item tanpa thumbnail memakai gambar default kategori. | S |
+| CAT-07 | **Guest dan player dapat menelusuri katalog publik yang searchable, filterable, sortable, paginated, dan memiliki detail item.** Hasil memakai 40 item per halaman, mempertahankan query string, hanya memuat item aktif, dan menampilkan thumbnail/fallback, canonical name, kategori, point value, offer range, metadata Rod, serta versi snapshot aktif. | M |
 
 ### 7.3 Inventory
 
@@ -181,11 +182,12 @@ Prioritas: `M` Must, `S` Should, `C` Could, dan `W` Won't untuk cakupan rilis sa
 
 | ID | Kebutuhan | Prioritas |
 |---|---|---|
-| SRC-01 | **Player dapat mencari listing berdasarkan wanted item, offered item, kategori, value range, dan freshness.** Default hanya menampilkan listing aktif milik pengguna lain. | M |
+| SRC-01 | **Player dapat mencari listing berdasarkan wanted item, offered item, kategori, value range, dan freshness.** Discovery diawali ringkasan `Kamu Berikan → W/F/L → Kamu Terima` yang mengarah ke simulator, kemudian menampilkan hasil `Temukan Trade`. Default hanya menampilkan listing aktif milik pengguna lain. | M |
 | SRC-02 | **Hasil search dipaginasi dan memiliki urutan deterministik.** Pagination tidak boleh menduplikasi atau melompati listing pada cursor yang sama. | M |
 | SRC-03 | **Guest hanya melihat hasil publik yang telah diredaksi.** Tindakan trade mengarahkan guest untuk authentication. | S |
 | SRC-04 | **Search tetap dapat digunakan saat upload/import value terbaru gagal.** Sistem memakai published snapshot terakhir dan menampilkan umur datanya. | M |
 | SRC-05 | **Pencarian fuzzy menggunakan alias katalog yang dikurasi.** Sistem tidak membuat catalog item baru hanya karena typo pengguna. | C |
+| SRC-06 | **Discovery menampilkan insight agregat dari listing aktif tanpa membocorkan identitas.** Jumlah listing aktif serta item paling banyak ditawarkan/dicari hanya memakai current version dan menghitung satu listing sekali per item. Panel `Insight Pasar` dan rekomendasi inventory berada pada rail yang sejajar dengan hasil pertama serta dapat diciutkan secara independen selama halaman aktif. | S |
 
 ### 7.6 Rekomendasi dan W/F/L
 
@@ -197,6 +199,8 @@ Prioritas: `M` Must, `S` Should, `C` Could, dan `W` Won't untuk cakupan rilis sa
 | REC-04 | **Ambang Fair awal adalah ±10% dan dapat diubah admin secara prospektif sebagai persentase non-negatif.** Perubahan dicatat di audit dan tidak mengubah hasil historis. | M |
 | REC-05 | **Item tanpa value membuat kombinasi tidak mendapat label W/F/L.** Sistem menunjukkan item penyebab agar pengguna memahami kekurangannya. | M |
 | REC-06 | **Sistem dapat mengurutkan kandidat berdasarkan kedekatan value dan jumlah item lebih sedikit.** Ranking bersifat bantuan dan tidak menyatakan jaminan trade terbaik. | S |
+| REC-07 | **Player dapat melihat maksimal tiga rekomendasi personal dari hasil Discovery saat ini.** Ranking memakai inventory aktif, quantity tersedia, dan snapshot masing-masing listing; guest serta inventory kosong mendapat state eksplisit tanpa data privat. | S |
+| REC-08 | **Player dapat mengubah setiap kandidat recommendation sebelum mengirim proposal.** Item tambahan hanya berasal dari inventory aktif miliknya, quantity tidak melebihi jumlah tersedia, maksimal delapan jenis item, dan ringkasan W/F/L wajib ditampilkan sebelum tombol kirim; server menghitung ulang serta memvalidasi komposisi saat submit. | M |
 
 ### 7.7 Negosiasi terstruktur
 
@@ -210,6 +214,9 @@ Prioritas: `M` Must, `S` Should, `C` Could, dan `W` Won't untuk cakupan rilis sa
 | NEG-06 | **Negotiation kedaluwarsa berdasarkan konfigurasi dan aktivitas terakhir.** Expiry menutup tindakan baru tanpa menghapus riwayat. | S |
 | NEG-07 | **Tidak ada field pesan bebas pada fase awal.** Seluruh komunikasi produk dibatasi pada pilihan item, action, reason code, dan pilihan server terstruktur. | M |
 | NEG-08 | **Pengguna dapat melaporkan negotiation atau lawan dengan reason code.** Catatan tambahan bebas ditunda sampai kebijakan moderasi dan privasi disetujui. | C |
+| NEG-09 | **Player melihat indikator dan daftar negotiation yang membutuhkan tindakannya.** Satu negotiation dihitung sekali ketika proposal, permintaan tambahan item, pilihan server, acceptance pra-deal, atau final acceptance belum ditangani player; state expired, terminal, revealed, dan tahap yang telah diterima player tidak dihitung. Bell membuka popover tanpa navigasi yang memuat paling banyak lima tindakan terbaru serta tautan langsung ke tahap terkait. | S |
+| NEG-10 | **Counteroffer memakai composer dua sisi yang setara dengan composer proposal.** Player hanya dapat mengubah sisi miliknya dari inventory aktif, sisi lawan tetap read-only, W/F/L diperbarui langsung, dan pengiriman dilakukan setelah modal ringkasan ditinjau. | M |
+| NEG-11 | **Player yang berada pada posisi `LOSE` dapat meminta lawan menambah item tanpa mengirim offer binding.** Proposal version ber-intent `request_more_items` tidak dapat diterima; penerima dapat menambah item dan membalas dengan counteroffer normal atau menolak permintaan. | S |
 
 ### 7.8 Pra-deal, final deal, dan reveal
 
@@ -324,9 +331,9 @@ Seluruh integrasi eksternal berada di server. Kegagalan integrasi tidak boleh me
 | Fase | Cakupan minimum | Requirement utama | Gerbang keluar |
 |---|---|---|---|
 | Fase 0 — Fondasi & Security Baseline | Dokumen, authentication, CI/test baseline, idempotency, dan server-only config. | ACC-01–ACC-06 | Endpoint privat terlindungi; pipeline bersih; tidak ada secret client. |
-| Fase 1 — Catalog Data & Admin | CSV staging/publish, kategori, snapshot, Rod, thumbnail, dan administrasi katalog. | CAT-01–CAT-06, AUD-04, ADM-01, ADM-03 | Import invalid tidak mengubah snapshot aktif; publish atomik/idempotent; admin route, UI, authorization, dan audit lulus. |
-| Fase 2 — Player Trade Core | Inventory, listing, discovery, search, dan simulator W/F/L. | INV-01–INV-04, LST-01–LST-06, SRC-01–SRC-05 | Alur UI lengkap; stale inventory ditolak; redaction bersih; search p95 tercapai. |
-| Fase 3 — Recommendation & Negotiation | Rekomendasi inventory dan negotiation terstruktur sampai proposal diterima. | REC-01–REC-06, NEG-01–NEG-07 | Route/UI operasional; stale version, invalidation, expiry, authorization, dan concurrency test lulus. |
+| Fase 1 — Catalog Data & Admin | CSV staging/publish, kategori, snapshot, Rod, thumbnail, katalog publik, dan administrasi katalog. | CAT-01–CAT-07, AUD-04, ADM-01, ADM-03 | Import invalid tidak mengubah snapshot aktif; publish atomik/idempotent; katalog publik serta admin route, UI, authorization, dan audit lulus. |
+| Fase 2 — Player Trade Core | Inventory, listing, discovery, search, dan simulator W/F/L. | INV-01–INV-04, LST-01–LST-06, SRC-01–SRC-06 | Alur UI lengkap; stale inventory ditolak; redaction bersih; search p95 tercapai. |
+| Fase 3 — Recommendation & Negotiation | Rekomendasi inventory dan negotiation terstruktur sampai proposal diterima, termasuk indikator tindakan tertunda, composer counteroffer, dan permintaan tambahan item non-binding. | REC-01–REC-08, NEG-01–NEG-07, NEG-09–NEG-11 | Route/UI operasional; indikator action state akurat; stale version, invalidation, expiry, authorization, intent, dan concurrency test lulus. |
 | Fase 4 — Pre-deal, Reveal & Trust Operations | Pilihan server, final deal `fee = 0`, reveal terbatas, report, suspension, dan audit operator. | NEG-08, DEL-01–DEL-08, AUD-01–AUD-03, ADM-02, ADM-04–ADM-05 | Tidak ada reveal prematur; finalisasi/retry atomik; disclaimer tampil; minimum trust operations tersedia. |
 | Fase 5 — Wallet, Payment & Dispute Finansial | Deposit, ledger, fee, callback, refund/compensation, dan dispute finansial. | WAL-01–WAL-06, PAY-01–PAY-05 | Keputusan pembayaran ditutup; review keamanan, reconciliation, idempotency, dan runbook insiden lulus. |
 | Fase 6 — Production Readiness & Launch | Migration rollout, observability, retention, backup/restore, monitoring, dan runbook. | Seluruh NFR dan gerbang operasional | Ready for rollout; launch tetap diblokir sampai backup off-host dan akses host tersedia. |

@@ -14,7 +14,7 @@ async function expectAccessible(page:Page):Promise<void>{
 }
 
 test('public and authenticated surfaces meet WCAG A/AA',async({page})=>{
-  for(const path of ['/','/login','/search']){
+  for(const path of ['/','/login','/search','/catalog']){
     await page.goto(path);
     await expectAccessible(page);
   }
@@ -25,8 +25,12 @@ test('public and authenticated surfaces meet WCAG A/AA',async({page})=>{
   await page.getByRole('button',{name:'Login'}).click();
   await expect(page).toHaveURL('/');
 
-  for(const path of ['/profile','/admin']){
+  for(const path of ['/profile','/simulator','/admin']){
     await page.goto(path);
     await expectAccessible(page);
   }
+
+  await page.goto('/simulator');
+  await page.getByRole('button',{name:'Add item You give'}).click();
+  await expectAccessible(page);
 });

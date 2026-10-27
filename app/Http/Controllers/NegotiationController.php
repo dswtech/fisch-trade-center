@@ -8,31 +8,30 @@ use App\Models\Negotiation;
 use App\Models\ProposalVersion;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 
 final class NegotiationController extends Controller
 {
     public function store(Request $request, NegotiationService $service): RedirectResponse
     {
-        $data = $this->items($request, ['listingId' => ['required', 'uuid']]);
+        $data = $this->items($request, [
+            'listingId' => ['required', 'uuid'],
+            'intent' => ['nullable', Rule::in(['offer', 'request_more_items'])],
+        ]);
         $listing = Listing::where('public_id', $data['listingId'])->firstOrFail();
-        $negotiation = $service->start($request->user(), $listing, $data['items']);
+        $negotiation = $service->start($request->user(), $listing, $data['items'], $data['intent'] ?? 'offer');
 
         return to_route('negotiations.show', $negotiation->public_id)->with('success', 'Negotiation started.');
     }
 
     public function counter(Request $request, string $negotiation, NegotiationService $service): RedirectResponse
     {
-        $data = $this->items($request);
+        $data = $this->items($request, [
+            'proposalId' => ['required', 'uuid'],
+            'intent' => ['nullable', Rule::in(['offer', 'request_more_items'])],
+        ]);
         $negotiation = $this->participant($request, $negotiation);
-        $active = ProposalVersion::where('negotiation_id', $negotiation->id)->where('version', $negotiation->active_proposal_version)->firstOrFail();
-        $current = DB::table('proposal_items')->join('inventory_entries', 'inventory_entries.id', '=', 'proposal_items.inventory_entry_id')
-            ->where('proposal_version_id', $active->id)->get(['proposal_items.side', 'inventory_entries.public_id as inventoryEntryId', 'proposal_items.quantity'])
-            ->groupBy('side')->map(fn ($items): array => $items->map(fn ($item): array => ['inventoryEntryId' => $item->inventoryEntryId, 'quantity' => $item->quantity])->all());
-        $initiator = $request->user()->id === $negotiation->initiator_id ? $data['items'] : $current->get('initiator', []);
-        $owner = $request->user()->id === $negotiation->owner_id ? $data['items'] : $current->get('owner', []);
-        $service->counter($request->user(), $negotiation, $initiator, $owner);
+        $service->counter($request->user(), $negotiation, $data['proposalId'], $data['items'], $data['intent'] ?? 'offer');
 
         return back()->with('success', 'Counteroffer sent.');
     }

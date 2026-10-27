@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Domain\Catalog\CatalogItemImage;
 use App\Domain\Trade\RecommendationService;
 use App\Domain\Trade\WflCalculator;
 use App\Models\Listing;
@@ -10,6 +11,7 @@ use App\Models\Deal;
 use App\Models\PreDealVersion;
 use App\Models\ProposalVersion;
 use App\Models\Report;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
@@ -17,10 +19,12 @@ use Inertia\Response;
 
 final class PhaseThreePageController extends Controller
 {
-    public function recommendations(Request $request, string $listing, RecommendationService $recommendations): Response
+    public function recommendations(Request $request, string $listing, RecommendationService $recommendations): Response|RedirectResponse
     {
         $listing = Listing::where('public_id', $listing)->firstOrFail();
-        abort_if($listing->user_id === $request->user()->id, 422, 'You cannot negotiate with your own listing.');
+        if ($listing->user_id === $request->user()->id) {
+            return to_route('listings.manage')->with('error', 'Penawaran ini milikmu. Pilih penawaran player lain untuk melihat rekomendasi.');
+        }
         $result = $recommendations->recommend($request->user()->id, $listing);
         $version = DB::table('listing_versions')->where('listing_id', $listing->id)->where('version', $listing->current_version)->firstOrFail();
 
@@ -31,15 +35,20 @@ final class PhaseThreePageController extends Controller
                 'alias' => 'Anonymous trader',
                 'offered' => $this->listingSide($version->id, 'offered'),
                 'wanted' => $this->listingSide($version->id, 'wanted'),
+                'offeredItems' => $this->listingSideItems($version->id, 'offered'),
+                'wantedItems' => $this->listingSideItems($version->id, 'wanted'),
                 'snapshotVersion' => $result['snapshotId'] ? (DB::table('value_snapshots')->where('public_id', $result['snapshotId'])->value('version') ?? '—') : '—',
             ],
             'missingItems' => $result['missingItems'],
+            'recommendationInventory' => $result['inventory'],
+            'fairThresholdPercent' => $result['fairThresholdPercent'],
             'recommendations' => collect($result['candidates'])->map(fn (array $candidate, int $index): array => [
                 'id' => 'candidate-'.($index + 1),
                 'items' => collect($candidate['items'])->map(fn (array $item): array => [
                     'id' => $item['inventoryEntryId'],
                     'inventoryEntryId' => $item['inventoryEntryId'],
                     'name' => $item['name'],
+                    'thumbnailUrl' => $item['thumbnailUrl'],
                     'quantity' => $item['quantity'],
                     'unitValue' => $item['unitValue'],
                     'offerRange' => $item['offerRange'],
@@ -77,9 +86,30 @@ final class PhaseThreePageController extends Controller
             'section' => 'negotiation',
             'negotiation' => $this->negotiation($negotiation, $request->user()->id, $proposals->firstWhere('version', $negotiation->active_proposal_version)),
             'proposals' => $proposals,
-            'entries' => DB::table('inventory_entries')->join('catalog_items', 'catalog_items.id', '=', 'inventory_entries.catalog_item_id')
+            'entries' => DB::table('inventory_entries')
+                ->join('catalog_items', 'catalog_items.id', '=', 'inventory_entries.catalog_item_id')
+                ->join('catalog_categories', 'catalog_categories.id', '=', 'catalog_items.category_id')
+                ->leftJoin('catalog_item_values', function ($join) use ($negotiation): void {
+                    $join->on('catalog_item_values.catalog_item_id', '=', 'inventory_entries.catalog_item_id')
+                        ->where('catalog_item_values.snapshot_id', '=', $negotiation->value_snapshot_id);
+                })
                 ->where('inventory_entries.user_id', $request->user()->id)->whereNull('inventory_entries.archived_at')->where('inventory_entries.quantity', '>', 0)
-                ->orderBy('catalog_items.canonical_name')->get(['inventory_entries.public_id as id', 'catalog_items.canonical_name as name', 'inventory_entries.quantity']),
+                ->orderBy('catalog_items.canonical_name')
+                ->get([
+                    'inventory_entries.public_id as id', 'catalog_items.canonical_name as name', 'inventory_entries.quantity',
+                    'catalog_items.thumbnail_path', 'catalog_categories.key as category_key',
+                    'catalog_item_values.unit_value', 'catalog_item_values.offer_range',
+                ])->map(fn ($entry): array => [
+                    'id' => $entry->id,
+                    'inventoryEntryId' => $entry->id,
+                    'name' => $entry->name,
+                    'quantity' => 1,
+                    'available' => (int) $entry->quantity,
+                    'unitValue' => $entry->unit_value === null ? null : (float) $entry->unit_value,
+                    'offerRange' => $entry->offer_range,
+                    'thumbnailUrl' => CatalogItemImage::url($entry->thumbnail_path, $entry->category_key),
+                ])->values(),
+            'fairThresholdPercent' => $this->threshold(),
             'reports' => Report::query()->where('reporter_id', $request->user()->id)->where('target_type', 'negotiation')
                 ->where('target_public_id', $negotiation->public_id)->latest('id')->get()
                 ->map(fn (Report $report): array => ['id' => $report->public_id, 'reason' => $report->reason_code, 'status' => $report->status, 'createdAt' => $report->created_at->toIso8601String()]),
@@ -122,6 +152,22 @@ final class PhaseThreePageController extends Controller
             ->get(['canonical_name', 'quantity'])->map(fn ($item): string => $item->canonical_name.($item->quantity > 1 ? ' ×'.$item->quantity : ''))->join(' + ') ?: '—';
     }
 
+    private function listingSideItems(int $versionId, string $side): array
+    {
+        return DB::table('listing_version_items')
+            ->join('catalog_items', 'catalog_items.id', '=', 'listing_version_items.catalog_item_id')
+            ->join('catalog_categories', 'catalog_categories.id', '=', 'catalog_items.category_id')
+            ->where('listing_version_id', $versionId)->where('side', $side)->orderBy('listing_version_items.id')
+            ->get(['catalog_items.public_id', 'catalog_items.canonical_name', 'catalog_items.thumbnail_path', 'catalog_categories.key as category_key', 'listing_version_items.quantity', 'listing_version_items.unit_value'])
+            ->map(fn ($item): array => [
+                'id' => $item->public_id,
+                'name' => $item->canonical_name,
+                'quantity' => (int) $item->quantity,
+                'unitValue' => $item->unit_value === null ? null : (float) $item->unit_value,
+                'thumbnailUrl' => CatalogItemImage::url($item->thumbnail_path, $item->category_key),
+            ])->values()->all();
+    }
+
     private function negotiation(Negotiation $negotiation, int $viewerId, ?array $activeProposal = null): array
     {
         return [
@@ -138,14 +184,21 @@ final class PhaseThreePageController extends Controller
     {
         $snapshotVersion = $proposal->value_snapshot_id ? DB::table('value_snapshots')->where('id', $proposal->value_snapshot_id)->value('version') : null;
         $items = DB::table('proposal_items')->join('inventory_entries', 'inventory_entries.id', '=', 'proposal_items.inventory_entry_id')
-            ->join('catalog_items', 'catalog_items.id', '=', 'proposal_items.catalog_item_id')->where('proposal_version_id', $proposal->id)
-            ->orderBy('proposal_items.id')->get(['proposal_items.id', 'proposal_items.owner_user_id', 'inventory_entries.public_id as inventory_entry_id', 'catalog_items.canonical_name', 'proposal_items.quantity', 'proposal_items.unit_value'])
+            ->join('catalog_items', 'catalog_items.id', '=', 'proposal_items.catalog_item_id')
+            ->join('catalog_categories', 'catalog_categories.id', '=', 'catalog_items.category_id')
+            ->where('proposal_version_id', $proposal->id)
+            ->orderBy('proposal_items.id')->get([
+                'proposal_items.id', 'proposal_items.owner_user_id', 'inventory_entries.public_id as inventory_entry_id',
+                'catalog_items.canonical_name', 'catalog_items.thumbnail_path', 'catalog_categories.key as category_key',
+                'proposal_items.quantity', 'proposal_items.unit_value',
+            ])
             ->map(fn ($item): array => [
                 'id' => (string) $item->id,
                 'inventoryEntryId' => $item->inventory_entry_id,
                 'name' => $item->canonical_name,
                 'quantity' => $item->quantity,
                 'unitValue' => $item->unit_value === null ? null : (float) $item->unit_value,
+                'thumbnailUrl' => CatalogItemImage::url($item->thumbnail_path, $item->category_key),
                 'side' => (int) $item->owner_user_id === $viewerId ? 'mine' : 'theirs',
             ]);
         $wfl = $calculator->calculate(
@@ -160,6 +213,8 @@ final class PhaseThreePageController extends Controller
             'id' => $proposal->public_id,
             'version' => $proposal->version,
             'status' => $proposal->status,
+            'intent' => $proposal->intent,
+            'proposerIsViewer' => (int) $proposal->proposer_id === $viewerId,
             'snapshotVersion' => $snapshotVersion ?? '—',
             'giveTotal' => $wfl['giveTotal'],
             'receiveTotal' => $wfl['receiveTotal'],
@@ -167,7 +222,7 @@ final class PhaseThreePageController extends Controller
             'perspectiveStatus' => $wfl['status'],
             'expiresAt' => $proposal->expires_at->toIso8601String(),
             'items' => $items,
-            'canAccept' => $proposal->status === 'active' && $proposal->expires_at->isFuture()
+            'canAccept' => $proposal->intent === 'offer' && $proposal->status === 'active' && $proposal->expires_at->isFuture()
                 && ! DB::table('proposal_acceptances')->where('proposal_version_id', $proposal->id)->where('user_id', $viewerId)->exists(),
         ];
     }

@@ -6,6 +6,8 @@ vi.mock('@inertiajs/react',()=>({
  Head:()=>null,
  Link:({href,children,...props}:any)=><a href={href} {...props}>{children}</a>,
  Form:({children,action,method,className}:any)=><form action={action} method={method} className={className}>{typeof children==='function'?children({processing:false,errors:{},submit:vi.fn()}):children}</form>,
+ router:{post:vi.fn()},
+ usePage:()=>({props:{tradeActions:{pendingCount:0,items:[]}}}),
 }));
 
 vi.mock('../lib/product-locale',()=>({

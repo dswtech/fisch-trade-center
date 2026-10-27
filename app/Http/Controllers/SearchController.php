@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Domain\Trade\DiscoveryPresenter;
+use App\Domain\Trade\MarketInsightService;
+use App\Domain\Trade\RecommendationService;
 use App\Models\Listing;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -12,7 +14,7 @@ use Inertia\Response;
 
 class SearchController extends Controller
 {
-    public function __invoke(Request $request, DiscoveryPresenter $presenter): Response
+    public function __invoke(Request $request, DiscoveryPresenter $presenter, MarketInsightService $insights, RecommendationService $recommendations): Response
     {
         $rules = [
             'offeredItem' => ['nullable', 'uuid'],
@@ -50,13 +52,23 @@ class SearchController extends Controller
             ->with(['latestVersion.items.catalogItem.category']);
 
         $page = $query->cursorPaginate(24)->withQueryString();
-        $listings = collect($page->items())->map($presenter->listing(...));
+        $listingModels = collect($page->items());
+        $listings = $listingModels->map($presenter->listing(...));
+        $snapshot = $presenter->activeSnapshot();
+        $marketInsights = $insights->summary();
+        $marketInsights['snapshot'] = $snapshot;
 
-        return Inertia::render('discovery', [
+        return Inertia::render('discovery-hub', [
             'listings' => $listings,
             'nextCursor' => $page->nextCursor()?->encode(),
+            'previousCursor' => $page->previousCursor()?->encode(),
             'filters' => collect($filters)->except('cursor'),
-            'snapshot' => $presenter->activeSnapshot(),
+            'snapshot' => $snapshot,
+            'marketInsights' => $marketInsights,
+            'personalRecommendations' => $request->user()
+                ? $recommendations->recommendListings($request->user()->id, $listingModels)
+                : ['state' => 'guest', 'results' => []],
+            'synthetic' => false,
             'filterOptions' => [
                 'items' => DB::table('catalog_items')->join('catalog_categories', 'catalog_categories.id', '=', 'catalog_items.category_id')->where('catalog_items.is_active', true)->where('catalog_categories.is_active', true)->whereIn('catalog_categories.key', array_keys((array) config('catalog.categories')))->orderBy('canonical_name')->get(['catalog_items.public_id as id', 'canonical_name as name']),
                 'categories' => DB::table('catalog_categories')->where('is_active', true)->whereIn('key', array_keys((array) config('catalog.categories')))->orderBy('name')->get(['public_id as id', 'name']),

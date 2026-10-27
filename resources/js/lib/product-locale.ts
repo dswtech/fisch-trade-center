@@ -10,5 +10,5 @@ export function useProductLocale(){
     const [locale,setLocale]=useState<Locale>(initial);
     useEffect(()=>localStorage.setItem('ftc-locale',locale),[locale]);
     const toggle=()=>{const next=locale==='id'?'en':'id';setLocale(next);if(props.auth?.user)retryableMutation('patch','/preferences',{locale:next});};
-    return {locale,toggle,user:props.auth?.user};
+    return {locale,toggle,user:props.auth?.user,pendingTradeActions:props.tradeActions?.pendingCount||0};
 }

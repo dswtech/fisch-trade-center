@@ -27,7 +27,11 @@ class AuthController extends Controller
     {
         $credentials = $request->validate(['email' => ['required','email'], 'password' => ['required','string']]);
         if (! Auth::attempt($credentials, $request->boolean('remember'))) return back()->withErrors(['email' => __('auth.failed')])->onlyInput('email');
-        $request->session()->regenerate(); return redirect()->intended(route('dashboard'));
+        $request->session()->regenerate();
+        $returnTo = $request->input('return_to');
+        if (is_string($returnTo) && strlen($returnTo) <= 2048 && preg_match('/^\/(?!\/)[^\x00-\x1F\x7F\\\\]*$/u', $returnTo)) return redirect($returnTo);
+
+        return redirect()->intended(route('dashboard'));
     }
     public function logout(Request $request): RedirectResponse
     {

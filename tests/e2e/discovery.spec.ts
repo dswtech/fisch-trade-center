@@ -4,11 +4,25 @@ test('public discovery supports filters, theme persistence, redaction, and respo
   await page.goto('/');
   await expect(page).toHaveTitle(/Discover Trades|Temukan Trade/);
   await expect(page.locator('.demo-badge')).toHaveCount(0);
-  await expect(page.locator('.recommendation-card').getByRole('link',{name:/Open simulator|Buka simulator/})).toBeVisible();
+  await expect(page.getByRole('heading',{name:/The Trade You Want|Trade yang Kamu Cari/})).toBeVisible();
+  await expect(page.getByRole('heading',{name:/You Give|Kamu Berikan/})).toBeVisible();
+  await expect(page.getByRole('heading',{name:/You Receive|Kamu Terima/})).toBeVisible();
+  await expect(page.getByRole('heading',{name:/Market Insights|Insight Pasar/})).toBeVisible();
+  await expect(page.getByRole('heading',{name:/Matches for Your Inventory|Cocok untuk Inventory-mu/})).toBeVisible();
+  await expect(page.getByRole('button',{name:/Login to make an offer|Login untuk menawarkan/}).first()).toBeVisible();
 
   const filterButton=page.getByRole('button',{name:/Filters|Filter/});
   await filterButton.click();
-  await expect(page.getByRole('dialog')).toBeVisible();
+  const filterDialog=page.getByRole('dialog');
+  await expect(filterDialog).toBeVisible();
+  const dialogBox=await filterDialog.boundingBox();
+  const viewport=page.viewportSize()!;
+  expect(dialogBox).not.toBeNull();
+  if(viewport.width<=700){
+    expect(Math.abs(dialogBox!.y+dialogBox!.height-viewport.height)).toBeLessThanOrEqual(2);
+  }else{
+    expect(Math.abs(dialogBox!.x+dialogBox!.width/2-viewport.width/2)).toBeLessThanOrEqual(3);
+  }
   await page.keyboard.press('Escape');
   await expect(page.getByRole('dialog')).toBeHidden();
   await expect(filterButton).toBeFocused();
@@ -31,14 +45,55 @@ test('keyboard reaches a visible interactive control',async({page})=>{
   await expect(page.locator(':focus')).not.toHaveCSS('outline-style','none');
 });
 
-test('wide discovery centers the balance orb on the give and receive boundary',async({page})=>{
+test('wide discovery uses a feed and sticky insight rail without overlap',async({page})=>{
   await page.setViewportSize({width:1800,height:1000});
   await page.goto('/');
-  const give=await page.locator('.give-panel').boundingBox();
-  const orb=await page.locator('.balance-orb').boundingBox();
+  const feed=await page.locator('.discovery-feed').boundingBox();
+  const rail=await page.locator('.discovery-rail').boundingBox();
+  const quickTrade=await page.locator('.quick-trade-zone').boundingBox();
+  const discoveryHeading=await page.getByRole('heading',{name:/Discover Trades|Temukan Trade/}).boundingBox();
+  expect(feed).not.toBeNull();
+  expect(rail).not.toBeNull();
+  expect(quickTrade).not.toBeNull();
+  expect(discoveryHeading).not.toBeNull();
+  expect(quickTrade!.y+quickTrade!.height).toBeLessThan(discoveryHeading!.y);
+  expect(rail!.x).toBeGreaterThan(feed!.x+feed!.width);
+  await expect(page.locator('.discovery-rail')).toHaveCSS('position','sticky');
+
+  const give=await page.locator('.quick-trade-zone .give-panel').boundingBox();
+  const receive=await page.locator('.quick-trade-zone .receive-panel').boundingBox();
+  const orb=await page.locator('.quick-trade-zone .balance-orb').boundingBox();
   expect(give).not.toBeNull();
+  expect(receive).not.toBeNull();
   expect(orb).not.toBeNull();
-  expect(Math.abs((give!.x+give!.width)-(orb!.x+orb!.width/2))).toBeLessThanOrEqual(3);
+  expect(Math.abs(give!.height-receive!.height)).toBeLessThanOrEqual(2);
+  expect(orb!.x).toBeGreaterThanOrEqual(give!.x+give!.width);
+  expect(orb!.x+orb!.width).toBeLessThanOrEqual(receive!.x);
+
+  const firstCard=await page.locator('[data-listing-id]').first().boundingBox();
+  const firstRail=await page.locator('.rail-panel').first().boundingBox();
+  expect(firstCard).not.toBeNull();
+  expect(firstRail).not.toBeNull();
+  expect(Math.abs(firstCard!.y-firstRail!.y)).toBeLessThanOrEqual(2);
+
+  const marketToggle=page.locator('[aria-controls="market-panel-content"]');
+  const personalToggle=page.locator('[aria-controls="personal-panel-content"]');
+  await marketToggle.click();
+  await expect(marketToggle).toHaveAttribute('aria-expanded','false');
+  await expect(personalToggle).toHaveAttribute('aria-expanded','true');
+  await personalToggle.click();
+  await expect(personalToggle).toHaveAttribute('aria-expanded','false');
+  expect((await page.locator('.discovery-feed').boundingBox())!.width).toBe(feed!.width);
+});
+
+test('guest trade action opens login over discovery and preserves the intended match',async({page})=>{
+  await page.goto('/');
+  const card=page.locator('[data-listing-id]').first();
+  const listingId=await card.getAttribute('data-listing-id');
+  await card.getByRole('button',{name:/Login to make an offer|Login untuk menawarkan/}).click();
+  await expect(page.getByRole('dialog')).toBeVisible();
+  await expect(page.locator('input[name="return_to"]')).toHaveValue(`/recommendations/${listingId}`);
+  await expect(page).toHaveURL('/');
 });
 
 test('combined filters expose loading state and continue with a deterministic cursor',async({page})=>{
@@ -64,7 +119,7 @@ test('combined filters expose loading state and continue with a deterministic cu
   const cards=page.locator('[data-listing-id]');
   await expect(cards).toHaveCount(24);
   const firstPageIds=await cards.evaluateAll(elements=>elements.map(element=>element.getAttribute('data-listing-id')));
-  await page.getByRole('button',{name:'Next page'}).click();
+  await page.getByRole('button',{name:/^Next$|^Berikutnya$/}).click();
   await expect(page).toHaveURL(/cursor=/);
   const secondPageIds=await cards.evaluateAll(elements=>elements.map(element=>element.getAttribute('data-listing-id')));
   expect(secondPageIds.length).toBeGreaterThan(0);

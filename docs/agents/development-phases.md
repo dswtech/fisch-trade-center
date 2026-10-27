@@ -3,8 +3,8 @@
 | Item | Keterangan |
 |---|---|
 | Dokumen | Roadmap fase development dan audit gap implementasi |
-| Versi | v1.2 |
-| Tanggal audit | 26 Oktober 2026 |
+| Versi | v1.5 |
+| Tanggal audit | 27 Oktober 2026 |
 | Pemilik | Product dan Engineering |
 | Status | Aktif |
 
@@ -17,23 +17,23 @@ Target MVP mencakup Fase 0–4 dengan wallet dan fee nonaktif serta `fee = 0`. F
 | Fase | Requirement utama | Dependency | Status audit |
 |---|---|---|---|
 | 0 — Fondasi & Security Baseline | ACC-01–ACC-06 | Tidak ada | Hampir selesai |
-| 1 — Catalog Data & Admin | CAT-01–CAT-06, AUD-04, ADM-01, ADM-03 | Fase 0 | Hampir selesai |
-| 2 — Player Trade Core | INV-01–INV-04, LST-01–LST-06, SRC-01–SRC-05 | Fase 0–1 | Hampir selesai |
-| 3 — Recommendation & Negotiation | REC-01–REC-06, NEG-01–NEG-07 | Fase 0–2 | Selesai |
+| 1 — Catalog Data & Admin | CAT-01–CAT-07, AUD-04, ADM-01, ADM-03 | Fase 0 | Hampir selesai |
+| 2 — Player Trade Core | INV-01–INV-04, LST-01–LST-06, SRC-01–SRC-06 | Fase 0–1 | Hampir selesai; Discovery memakai quick-trade tiga kolom, rail collapsible, dan dialog filter responsif. |
+| 3 — Recommendation & Negotiation | REC-01–REC-08, NEG-01–NEG-07, NEG-09–NEG-11 | Fase 0–2 | Selesai; tindakan tertunda tersedia sebagai badge dan popover lima item terbaru. |
 | 4 — Pre-deal, Reveal & Trust Operations | NEG-08, DEL-01–DEL-08, AUD-01–AUD-03, ADM-02, ADM-04–ADM-05 | Fase 0–3 | Selesai |
 | 5 — Wallet, Payment & Dispute Finansial | WAL-01–WAL-06, PAY-01–PAY-05 | Fase 0–4 dan keputusan produk pembayaran | Belum dimulai; bukan gate MVP |
 | 6 — Production Readiness & Launch | Seluruh NFR dan gerbang operasional | Fase 0–4 untuk MVP; Fase 5 untuk monetisasi | Ready for rollout — blocked by off-host backup |
 
-Pemetaan di atas menempatkan seluruh 69 requirement aktif tepat pada satu fase utama. Dependency lintas fase tidak mengubah kepemilikan requirement.
+Pemetaan di atas menempatkan seluruh 76 requirement aktif tepat pada satu fase utama. Dependency lintas fase tidak mengubah kepemilikan requirement.
 
 ## Bukti inspeksi
 
 | Fase | Route/UI | Implementation path | Test yang tersedia |
 |---|---|---|---|
 | 0 | Route authentication, verification, profile, dan preferences di `routes/web.php`; mutation privat memakai rate limit | `AuthController`, middleware idempotensi, `bootstrap/app.php`, `.github/workflows/ci.yml` | Authentication, idempotensi, dan rate limit mutation di `tests/Feature/ExampleTest.php` |
-| 1 | Route admin import, lifecycle Rod, metadata katalog, dan thumbnail di `routes/web.php`; panel `resources/js/pages/admin.tsx` | `app/Domain/Catalog`, controller admin katalog, migration Rod/thumbnail | `CatalogValueCsvImportTest.php` termasuk failure injection publish dan `resources/js/tests/admin.test.tsx` |
-| 2 | Route inventory, listing termasuk halaman edit, search, dan simulator di `routes/web.php`; UI workspace/discovery | Controller inventory/listing/search, `DiscoveryPresenter`, `WflCalculator`, model listing version | `ExampleTest.php`, E2E discovery/player flow/accessibility, dan benchmark search |
-| 3 | Route recommendation, daftar/detail negotiation, start, counter, accept, reject, dan cancel di `routes/web.php`; UI `trade.tsx` dapat dijangkau dari listing discovery | `PhaseThreePageController`, `NegotiationController`, `RecommendationService`, `NegotiationService`, `NegotiationInvalidator`, `PhaseTwoExpiryService` | `PhaseThreeNegotiationTest.php`, `resources/js/tests/trade.test.tsx`, dan E2E negotiation di `player-flow.spec.ts` |
+| 1 | Route katalog publik/list item dan route admin import, lifecycle Rod, metadata katalog, serta thumbnail di `routes/web.php`; UI `workspace.tsx` dan panel `admin.tsx` | `PhaseOnePageController`, `app/Domain/Catalog`, controller admin katalog, migration Rod/thumbnail | `CatalogBrowsingTest.php`, `CatalogValueCsvImportTest.php` termasuk failure injection publish, serta test React katalog/admin |
+| 2 | Route inventory, listing termasuk halaman edit, search, dan simulator di `routes/web.php`; Discovery dua kolom menampilkan feed serta insight pasar current-version | Controller inventory/listing/search, `DiscoveryPresenter`, `MarketInsightService`, `WflCalculator`, model listing version | `ExampleTest.php`, `DiscoveryHubTest.php`, E2E discovery/player flow/accessibility, dan benchmark search |
+| 3 | Route recommendation, daftar/detail negotiation, start, counter, accept, reject, dan cancel di `routes/web.php`; Discovery menampilkan rekomendasi personal batch; header menampilkan badge action state | `PhaseThreePageController`, `NegotiationController`, `RecommendationService`, `NegotiationService`, `NegotiationInvalidator`, `PhaseTwoExpiryService`, shared prop `tradeActions` | `PhaseThreeNegotiationTest.php`, `DiscoveryHubTest.php`, pending-count di `CatalogBrowsingTest.php`, test React shell/trade, dan E2E negotiation di `player-flow.spec.ts` |
 | 4 | Route/UI server choice, final acceptance, deal/reveal, report, suspension, audit operator, dan time controls admin non-production tersedia | `DealService`, `PhaseFourExpiryService`, controller deal/report/suspension/audit/time-control, middleware operator/suspension, schema deal/reveal | `PhaseThreeNegotiationTest.php`, `ModerationAuditTest.php`, component/E2E trade dan trust operations, serta concurrency PostgreSQL final acceptance |
 | 5 | Tidak ada route atau UI wallet/payment | ADR-005 saja; schema dan domain wallet/payment belum tersedia | Belum ada |
 | 6 | `/up`, `/ready`, global correlation/security middleware, scheduler heartbeat, dan command retention | `RetentionService`, konfigurasi operations, artefak Linux VM, CI PostgreSQL, ADR-009, serta runbook operasi | `ProductionReadinessTest.php`, `RetentionServiceTest.php`, suite aplikasi, E2E accessibility, dan benchmark/concurrency PostgreSQL |
@@ -52,7 +52,7 @@ Pemetaan di atas menempatkan seluruh 69 requirement aktif tepat pada satu fase u
 
 **Outcome:** operator dapat memelihara katalog/value secara manual dan pengguna selalu membaca satu snapshot published yang valid.
 
-**Bukti:** endpoint template, staging, publish, create/assign Rod, serta upload/delete thumbnail terdaftar; service CSV menyediakan partial upsert dan snapshot immutable; feature/component test katalog tersedia.
+**Bukti:** endpoint katalog publik menyediakan search canonical/alias/kategori, empat sort order, pagination 40 item, dan detail stable `public_id`. Endpoint template, staging, publish, create/assign Rod, serta upload/delete thumbnail juga terdaftar; service CSV menyediakan partial upsert dan snapshot immutable; feature/component test katalog tersedia.
 
 **Gap dan blocker:** update status/alias katalog serta rename/inactive Rod kini mempunyai route, UI, authorization, audit, dan test. Rollback publish dibuktikan dengan SQLite failure injection. Seluruh migration pending Fase 1–4 telah dijalankan pada database persisten pada 26 Oktober 2026 setelah otorisasi eksplisit.
 
@@ -72,7 +72,7 @@ Pemetaan di atas menempatkan seluruh 69 requirement aktif tepat pada satu fase u
 
 **Outcome:** player dapat memilih rekomendasi inventory, memulai negotiation anonim, melakukan counteroffer, dan menerima versi proposal aktif.
 
-**Bukti:** listing discovery membuka recommendation nyata dari inventory pengguna; route HTTP mendukung start, counter, accept, reject, cancel, index, dan detail negotiation; alias anonim serta authorization peserta diterapkan. Counteroffer mempertahankan history, stale acceptance menghasilkan konflik, dan mutation inventory/listing menginvalidasi proposal aktif dalam transaksi yang sama. Feature, component, dan E2E test mencakup alur utama serta redaction identitas.
+**Bukti:** listing discovery membuka recommendation nyata dari inventory pengguna; setiap kandidat dapat diedit sampai delapan jenis item dengan quantity yang dibatasi inventory dan modal ringkasan W/F/L sebelum submit. Route HTTP mendukung start, counter, accept, reject, cancel, index, dan detail negotiation; alias anonim serta authorization peserta diterapkan. Header player menghitung setiap negotiation yang membutuhkan tindakan tepat sekali dan mengarah langsung ke daftar negotiation. Counteroffer memakai composer dua sisi: sisi actor berasal dari inventory dan editable, sisi lawan read-only, W/F/L dihitung langsung, lalu submit dilakukan dari modal ringkasan. Draft `LOSE` dapat menjadi permintaan tambahan item non-binding yang tidak dapat di-accept. Counter memakai active proposal ID dan lock agar versi basi ditolak. Feature, component, dan E2E test mencakup alur utama, intent, thumbnail, serta redaction identitas.
 
 **Gap dan blocker:** gerbang capability tertutup pada 26 Oktober 2026. Proposal aktif kedaluwarsa setelah 24 jam dan negotiation setelah 7 hari; job `trade:expire-phase-three` berjalan setiap menit melalui scheduler yang sudah dipanggil Windows Scheduled Task. Test memastikan job hanya menutup state Fase 3 sehingga keputusan expiry Fase 4 tidak diterapkan diam-diam. Test PostgreSQL disposable memakai dua proses/koneksi yang menerima proposal sama secara bersamaan dan membuktikan tepat dua acceptance serta audit event, dengan status akhir proposal/negotiation `accepted`. Pengukuran biaya recommendation skala besar dipindahkan ke hardening performa Fase 6 karena PRD tidak menetapkan target terpisah untuk beam search.
 

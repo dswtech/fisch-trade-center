@@ -3,7 +3,7 @@
 | Item | Keterangan |
 |---|---|
 | Dokumen | Memory kerja agen |
-| Terakhir diperbarui | 26 Oktober 2026 |
+| Terakhir diperbarui | 27 Oktober 2026 |
 | Pemilik | Engineering |
 | Status | Aktif |
 
@@ -13,6 +13,7 @@
 - Stack aplikasi: Laravel 13.38.0, Inertia 3.5.2, React 19.3.1, Tailwind CSS 4.3, dan PostgreSQL sebagai target produksi. Seluruh test backend dan E2E memakai SQLite disposable.
 - Checkpoint sebelum redesign tersimpan sebagai commit `a77ac3d` (`chore: checkpoint phase two wip before catalog import redesign`). Kondisi checkpoint: Vitest 8/8 dan TypeScript lulus; PHPUnit 41 test memiliki 1 error dan 1 failure.
 - Collision v8.9.5 dipasang sebagai dev dependency bersama Whoops v2.18.7. `php artisan test` kini tersedia; tidak ada package existing yang diperbarui atau dihapus.
+- Environment aplikasi manual pada workstation ditetapkan sebagai `local`: URL `ftc.test` dan PostgreSQL lokal `dsw_fisch_tc`. PHPUnit/Playwright tetap memakai `testing` dengan database disposable. Pengguna mengizinkan reset serta seed ulang database local/development bila diperlukan; izin ini tidak mencakup staging atau production.
 
 ## Keputusan aktif
 
@@ -35,6 +36,10 @@
 
 ## Pekerjaan redesign katalog yang terverifikasi
 
+- Katalog publik `/catalog` kini mencari canonical name, alias, dan kategori tanpa membedakan huruf besar/kecil; memfilter empat kategori aktif; menyediakan empat urutan dengan value kosong selalu terakhir; dan memaginasi hasil di server sebanyak 40 item per halaman sambil mempertahankan query string serta browser history.
+- Grid katalog memakai lima kolom wide, tiga kolom tablet, dan dua kolom mobile. Kartu menampilkan thumbnail/fallback dominan, kategori, canonical name, value PTS, offer range, serta membuka detail stabil `/catalog/{public_id}`. Detail inactive dan ID asing menghasilkan 404.
+- Header publik menampilkan Login untuk guest. User terautentikasi memperoleh menu akun keyboard-accessible untuk Profil/Logout serta bell menuju negotiation dengan badge jumlah negotiation unik yang masih membutuhkan tindakan user; state expired, terminal, revealed, atau acceptance user yang sudah ada dikecualikan.
+- Kartu katalog dipadatkan tanpa mengubah grid 5/3/2 kolom: artwork memakai rasio 4:3, jarak antarkartu lebih rapat, dan area metadata lebih pendek dengan teks minimum 11 px. Thumbnail dikunci secara absolut dengan inset 10 px agar intrinsic size fallback tidak memperbesar frame dan gambar terlihat penuh. Warna `option`/`optgroup` native mengikuti token tema secara global agar dropdown katalog, player, admin, dan operator tetap terbaca. Login header membuka popover desktop atau bottom sheet mobile, memfokuskan field Email, dapat ditutup dengan Escape/click-outside, dan kembali ke URL lokal asal setelah autentikasi; return URL eksternal ditolak.
 - Endpoint admin tersedia untuk unduh template, staging CSV, publish, master Rod, assignment Rod Skin, serta upload/replace/delete thumbnail.
 - Fetch Google Sheets, konfigurasi sumber, command `values:import`, registrasi schedule, manifest Skin lama, dan jalur metadata eksternal telah dihapus.
 - DTO katalog, inventory, listing, dan discovery memakai resolver thumbnail yang sama. Katalog menampilkan metadata Rod dan fallback `Undefined Rod`.
@@ -75,16 +80,31 @@
 
 ## Verifikasi terakhir
 
+- Kartu recommendation diubah pada 27 Oktober 2026 menjadi draft proposal interaktif per kandidat. Player dapat menambah item dari inventory, mengubah quantity dalam batas tersedia, menghapus item, dan melihat W/F/L berubah langsung. `Kirim proposal` dipindahkan ke modal ringkasan W/F/L; kedua sisi modal menampilkan thumbnail, nama, dan quantity dari snapshot listing. Server tetap memvalidasi maksimal delapan jenis item, kepemilikan, quantity, dan value snapshot. Vitest 24/24, TypeScript, Vite build, `PhaseThreeNegotiationTest` 12/12, dan regresi Playwright desktop khusus edit-summary-submit lulus. Browser desktop/mobile memverifikasi picker, perubahan FAIR ke LOSE, modal ringkasan, dan tidak ada horizontal overflow.
+- Builder `Buat Penawaran` diubah pada 27 Oktober 2026 menjadi komposer `Kamu Berikan VS Kamu Cari` seperti simulator. Item dan quantity ditambah/dikurangi dinamis; picker Berikan hanya bersumber dari inventory aktif user, sedangkan picker Cari memakai katalog aktif. Desktop memakai dua sisi sejajar dan mobile menumpuk kedua sisi dengan picker bottom sheet tiga kolom. Create/edit mempertahankan payload backend lama, batas quantity inventory, total kedua sisi, serta selected state edit.
+- Verifikasi builder terbaru: Vitest 23/23, TypeScript, dan Vite build lulus. Inspeksi browser aktual pada 1265×710 dan 390×844 memastikan komposer VS, quantity controls, picker desktop/mobile, serta label ketersediaan inventory bekerja. Unit test khusus membuktikan item tanpa inventory atau quantity nol tidak masuk picker Berikan.
+- Halaman recommendation dipadatkan menjadi dua kartu per baris pada desktop dan satu kartu pada mobile. Thumbnail/fallback item, quantity, offer range, total kedua sisi, delta, serta badge teks W/F/L tampil langsung; URL recommendation milik sendiri kini mengarah aman ke `Penawaran Saya`.
+- Feature test PhaseThreeNegotiation lulus 12/12 (219 assertion), test komponen recommendation termasuk dalam Vitest 21/21, dan regression Playwright `player-flow.spec.ts` lulus 14/14 pada desktop/mobile. Inspeksi browser aktual memastikan kartu rapat, gambar terbaca, CTA tidak overlap, dan W/F/L menonjol. Lint design-taste untuk `trade.tsx` menghasilkan 0 failure dan satu warning em dash legacy pada copy bersama.
+- Discovery kini diawali ringkasan `Kamu Berikan → W/F/L → Kamu Terima` yang mengarah ke simulator. Feed `Temukan Trade` tetap berada tepat di bawahnya. Regression browser khusus Discovery lulus 12/12 dan inspeksi browser desktop memastikan kedua blok tersusun tanpa overlap.
+- `PreviewExperienceSeeder` menyediakan dataset sintetis local/testing yang idempotent dan production-safe: akun preview, 32 item bernilai untuk inventory trader, 18 penawaran pasar, satu penawaran player, serta satu negotiation aktif. Seeder dijalankan pada PostgreSQL lokal atas instruksi eksplisit; keadaan setelah seed adalah 9 user, 175 inventory entry, 20 listing total, dan 1 negotiation.
+- Discovery/Temukan Trade didesain ulang pada 27 Oktober 2026 menjadi feed dua kolom dengan kartu multi-item, W/F/L, cursor pagination, insight pasar global, dan maksimal tiga rekomendasi inventory personal. Rail 340 px sticky pada desktop dan berpindah setelah feed pada tablet/mobile. Guest membuka modal login tanpa kehilangan tujuan; menu pemain memakai `Penawaran Saya` dan `Buat Penawaran`.
+- Perbaikan Discovery 27 Oktober 2026 memberi quick-trade kolom tengah 96 px untuk orb W/F/L non-absolute, menyelaraskan kartu hasil pertama dengan rail, membuat kedua panel rail dapat diciutkan independen, serta mengganti drawer filter dengan dialog tengah desktop/bottom sheet mobile. Bell player kini membuka popover maksimal lima tindakan trade terbaru tanpa mengubah URL; badge tetap menghitung seluruh tindakan tertunda dan payload hanya memuat alias anonim.
+- Market insight hanya menghitung listing aktif, belum kedaluwarsa, dan current version; satu listing dihitung sekali per item. Recommendation memuat inventory serta value snapshot secara batch, menghormati quantity tersedia, dan tidak mengirim data inventory kepada guest. Alias publik tetap anonim dan identitas Roblox tetap teredaksi.
+- Inspeksi browser terakhir pada viewport desktop dan 412×915 memastikan hierarki dua kolom, kartu ringkas, CTA, rail, bottom navigation, dan susunan mobile tampil tanpa overlap atau horizontal overflow. Lint design-taste untuk komponen Discovery menghasilkan 0 temuan.
 - Shell aplikasi pemain disatukan pada 26 Oktober 2026 melalui `ProductShell`: Discovery, katalog, inventory, listing, simulator, profil, negotiation/deal, dan Trust Operations kini mempertahankan topbar, sidebar, active state, drawer, serta bottom navigation yang sama. Console admin dan time controls tetap memakai shell operator khusus.
 - Balance orb pada Discovery disejajarkan dengan batas aktual kolom give/receive, termasuk pada viewport 1.800 px. Regression Playwright juga membuka seluruh menu pemain untuk memastikan shell tidak kembali berganti menjadi `module-header`/`module-nav`.
-- Layout simulator diperbaiki pada 26 Oktober 2026: form kembali memakai kontrak class `simulator-grid`, balance orb dikunci 150×150 px, kolom item/quantity dibatasi agar tidak overflow, dan CTA memakai lebar yang sesuai di mobile. Regression Playwright memverifikasi orb tetap bulat serta tidak ada horizontal overflow pada desktop dan mobile.
-- `composer test` pada SQLite `:memory:`: 57 test, 571 assertion, lulus.
-- Vitest lulus 15/15; TypeScript strict typecheck lulus; Vite build lulus. Full Playwright menghasilkan 25 functional test lulus dan satu temuan WCAG pada accessible name brand; label diperbaiki lalu suite accessibility desktop/mobile lulus 2/2.
-- Test PostgreSQL disposable dengan dua proses/koneksi lulus untuk acceptance proposal dan final acceptance deal. Deal concurrency menghasilkan status `revealed`, tepat 2 acceptance, 2 identity snapshot, 2 reveal entitlement, dan 1 audit reveal. Benchmark 100.000 listing terbaru mencatat p95 maksimum `357,33 ms`, di bawah target `1.000 ms`.
+- Simulator didesain ulang pada 26 Oktober 2026 mengikuti pola kalkulator slot item: maksimal sembilan slot per sisi, picker bergambar dengan search/filter kategori, quantity/remove, live total dan persentase pembagian, serta orb W/F/L responsif. Perhitungan final tetap memakai endpoint server dan satu immutable active snapshot; branding, aset, dan sumber value pihak ketiga tidak disalin.
+- Visual simulator dan picker diperiksa dua putaran pada desktop serta mobile. Perbaikan terakhir menjaga card picker tetap rapat di atas dan orb mobile tepat di tengah divider.
+- `php artisan test` pada SQLite disposable: 67 test, 806 assertion, lulus. Ini mencakup idempotensi dan guard dataset preview. Collision perlu dijalankan di luar sandbox Codex lokal karena ACL sandbox menandai path bootstrap tidak writable; file dan runner proyek sendiri valid.
+- Verifikasi perbaikan Discovery dan popover tindakan trade pada 27 Oktober 2026: `php artisan test` lulus 70 test/894 assertion; Vitest lulus 25/25; TypeScript strict typecheck, production build, full Playwright desktop/mobile/WCAG 34/34, dan `git diff --check` lulus. Design lint global masih melaporkan debt stylesheet lama (22 failure dan 14 warning untuk hairline, shadow, serta eyebrow), bukan regresi baru. Build tetap memberi warning Node 22.11.0 sementara Vite meminta 22.12+, dan asset `/images/trade-ocean-field.png` diselesaikan saat runtime.
+- Katalog dan detail item diperiksa dalam dua putaran screenshot pada desktop serta Pixel 7. Grid 5/2 kolom, toolbar, pagination, detail, header, dan bottom navigation tidak mengalami horizontal overflow.
+- Test PostgreSQL disposable dengan dua proses/koneksi lulus untuk acceptance proposal dan final acceptance deal. Deal concurrency menghasilkan status `revealed`, tepat 2 acceptance, 2 identity snapshot, 2 reveal entitlement, dan 1 audit reveal. Benchmark 100.000 listing terbaru mencatat p95 matrix search maksimum `527,23 ms` dan p95 insight pasar `420,95 ms`, di bawah target `1.000 ms`.
 - Syntax PHP dan Bash, production config cache, route cache, YAML CI, link Markdown, manifest dokumentasi, dan `git diff --check` lulus. GitHub Actions run `40285977892` lulus untuk job aplikasi Windows dan `production-operations` Linux/PostgreSQL 16, termasuk migration disposable, concurrency, benchmark, backup checksum/row-count, dan restore drill.
-- Lint design-taste pada shell dan halaman pemain menghasilkan 0 fail dan 1 warning untuk penggunaan em-dash sebagai simbol nilai kosong/label; Impeccable detector menghasilkan 0 temuan.
+- Impeccable detector pada JSX/CSS katalog menghasilkan 0 temuan. Audit design-taste seluruh CSS global masih memuat temuan legacy untuk gradient, hairline, shadow, dan eyebrow di luar scope redesign katalog.
+- Regression Playwright khusus katalog/login lulus 6/6 pada desktop dan mobile. QA browser memastikan katalog lebih padat dan popover desktop tetap menampilkan konteks katalog; inspector app masih melaporkan gradient shell, effect tombol, ukuran judul, dan bottom-nav edge spacing yang merupakan baseline global sebelum perubahan ini.
+- Automated test tetap memakai SQLite disposable untuk E2E. PostgreSQL lokal hanya ditulis untuk migration/cleanup yang pernah diotorisasi dan dataset preview sintetis terbaru; staging serta production tidak ditulis.
 - Build lokal memakai Node 22.11.0 dan memberi warning karena Vite meminta 22.12+; build tetap berhasil. Asset `/images/trade-ocean-field.png` diselesaikan saat runtime.
-- Audit statis memetakan seluruh 69 requirement aktif tepat ke satu fase utama. Bukti diperiksa melalui route, controller/service, UI, migration, dan test; hasilnya dicatat di `development-phases.md`.
+- Audit statis memetakan seluruh 76 requirement aktif tepat ke satu fase utama, termasuk CAT-07 pada Fase 1, SRC-06 pada Fase 2, serta REC-07, REC-08, dan NEG-09–NEG-11 pada Fase 3. Bukti diperiksa melalui route, controller/service, UI, migration, dan test; hasilnya dicatat di `development-phases.md`.
 - `composer validate --strict` menyatakan schema valid, dengan warning existing untuk exact constraint Laravel dan Inertia.
 
 ## Gap implementasi per fase
@@ -106,16 +126,25 @@
 
 ## Next step
 
-1. Sediakan akses Linux VM, encrypted off-host backup, dan provider-neutral monitor; jalankan restore drill dari off-host copy.
-2. Migration persisten dan deployment nyata tetap hanya boleh dijalankan setelah pengguna memberi instruksi eksplisit.
-3. Fase 5 tetap tidak dimulai sebelum sisa keputusan provider, nominal fee, refund, dan reconciliation ditutup.
+1. Review lalu commit/push redesign simulator, katalog, dan Discovery dua kolom yang masih berada di working tree jika pengguna memerintahkannya.
+2. Sediakan akses Linux VM, encrypted off-host backup, dan provider-neutral monitor; jalankan restore drill dari off-host copy.
+3. Migration persisten dan deployment nyata tetap hanya boleh dijalankan setelah pengguna memberi instruksi eksplisit.
+4. Fase 5 tetap tidak dimulai sebelum sisa keputusan provider, nominal fee, refund, dan reconciliation ditutup.
 
 ## Cara memperbarui memory
 
 Ubah hanya berdasarkan hasil yang benar-benar terjadi. Catat tanggal, fitur yang berubah, test beserta hasilnya, keputusan baru, blocker, dan next step. Hapus fakta yang sudah tidak berlaku atau pindahkan keputusan arsitektur yang mahal dibalik ke ADR baru.
 
-## Rencana tertunda — counteroffer
+## Implementasi counteroffer terstruktur — 27 Oktober 2026
 
-- Pada 27 Oktober 2026, pengguna menyetujui rancangan counteroffer yang memakai composer dua sisi seperti pembuatan proposal: sisi pengguna editable, sisi lawan read-only, W/F/L langsung, picker inventory bergambar, dan submit melalui modal ringkasan.
-- Draft `LOSE` dapat dikirim sebagai permintaan non-binding `request_more_items`. Penerima tidak dapat Accept; ia hanya dapat menambah item dan membalas melalui counteroffer atau menolak permintaan.
-- Rencana lengkap tersimpan di [`counteroffer-ux-plan.md`](counteroffer-ux-plan.md). Belum ada kode, migration, atau test yang diubah untuk rencana ini.
+- Counteroffer memakai composer dua sisi seperti pembuatan proposal: sisi pengguna editable dari inventory, sisi lawan read-only, W/F/L langsung, picker bergambar, dan submit melalui modal ringkasan.
+- Draft `LOSE` dapat dikirim sebagai permintaan non-binding `request_more_items`. Penerima tidak dapat Accept; ia hanya dapat menambah item dan membalas melalui counteroffer normal atau menolak permintaan.
+- Proposal version menyimpan `intent`; counter menyertakan active `proposalId` dan server membaca sisi lawan di bawah lock agar versi basi tidak menimpa komposisi terbaru. Migration `2026_10_27_000100_add_intent_to_proposal_versions` diterapkan ke PostgreSQL lokal `dsw_fisch_tc` pada 27 Oktober 2026 atas izin eksplisit pengguna; staging dan production tidak disentuh.
+- Verifikasi akhir: `php artisan test` lulus 69 test/866 assertion; Vitest lulus 25 test; TypeScript dan production build lulus; Playwright desktop/mobile termasuk WCAG lulus 34 test. Lint design-taste tidak memiliki failure. Build tetap memberi warning environment lokal Node 22.11.0 (Vite meminta 22.12+) dan resolusi runtime `/images/trade-ocean-field.png`.
+
+## Perbaikan Discovery dan tindakan trade — 27 Oktober 2026
+
+- Quick trade memakai grid `1fr 96px 1fr`; orb W/F/L menempati kolom tengah tanpa posisi absolut. Pemeriksaan browser pada viewport 1.280 px membuktikan kedua sisi sama tinggi, celah orb 6 px dari setiap sisi, heading hasil dan rail sejajar, serta tidak ada overflow horizontal.
+- `Insight Pasar` dan `Cocok untuk Inventory-mu` dapat dilipat secara independen selama halaman aktif. Filter menjadi dialog tengah desktop selebar maksimum 520 px dan bottom sheet penuh pada mobile, dengan focus trap, Escape, click-outside, scroll lock, serta focus return.
+- Bell menjadi popover tanpa navigasi. Payload hanya memuat maksimal lima tindakan terbaru yang sudah dideduplikasi per negotiation, sementara badge tetap memakai jumlah penuh. Alias anonim, stage, waktu, dan tujuan negotiation/deal tersedia tanpa mengekspos identitas Roblox.
+- Tidak ada dependency baru. Setelah error runtime menunjukkan kolom `p.intent` belum tersedia, migration `proposal_versions.intent` diterapkan ke PostgreSQL lokal atas izin eksplisit pengguna. Status migration menjadi batch 3 `Ran`; regression `CatalogBrowsingTest` lulus 5 test/180 assertion. Rollout staging dan production tetap terpisah.

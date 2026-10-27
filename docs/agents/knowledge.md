@@ -32,6 +32,12 @@ Roadmap delivery memakai Fase 0–6 yang didefinisikan di [`development-phases.m
 
 Schema, service, atau UI statis tidak cukup untuk menyatakan fase selesai. Capability harus memiliki jalur HTTP yang dapat digunakan, authorization, UI operasional bila diperlukan, dan automated test sesuai gerbang fasenya.
 
+## Environment development
+
+`local` berarti aplikasi berjalan pada komputer developer dengan URL `ftc.test` dan PostgreSQL lokal. Environment ini boleh di-reset atau diisi ulang setelah instruksi pengguna. `testing` hanya untuk PHPUnit, Playwright, dan database disposable; `staging` serta `production` tidak boleh menerima fixture preview.
+
+`Database\\Seeders\\PreviewExperienceSeeder` menyediakan dataset UI sintetis yang idempotent untuk local/testing. Seeder memakai katalog dan published value snapshot yang sudah tersedia, lalu membuat akun preview, inventory, penawaran multi-item, insight pasar, dan negotiation aktif. Guard menolak production serta database non-SQLite yang host-nya bukan `127.0.0.1` atau `localhost`.
+
 ## Katalog awal
 
 Katalog awal hanya mengaktifkan kategori berikut, tetapi entity kategori tidak boleh berupa enum tertutup agar kategori baru dapat ditambah tanpa perubahan schema besar:
@@ -64,6 +70,12 @@ Katalog dan value produksi berasal dari CSV UTF-8 yang diunggah admin. Upload be
 
 Kolom CSV adalah `item_key`, `category`, `name`, `aliases`, `value`, `offer_range`, dan `status`. Server membuat `item_key` untuk item baru; template ekspor berikutnya menyertakan key tersebut. Rod dan thumbnail tidak berasal dari CSV. Thumbnail menerima JPG/PNG/WebP maksimal 2 MB dan menggunakan asset default kategori ketika belum tersedia.
 
+Discovery menyebut listing milik player sebagai `Penawaran Saya`. Halaman diawali ringkasan `Kamu Berikan → W/F/L → Kamu Terima` yang mengarahkan player ke simulator; desktop memberi orb W/F/L kolom tengah 96 px sendiri agar tidak menimpa kedua sisi. Feed `Temukan Trade` berada di bawahnya dan dimulai sejajar dengan rail kanan. Feed publik tetap memakai alias anonim dan current listing version. Insight pasar menghitung satu listing aktif sekali per catalog item untuk setiap sisi, sedangkan rekomendasi personal hanya memakai inventory viewer serta snapshot masing-masing listing yang sedang tampil. Kedua panel rail dapat diciutkan secara independen; filter tampil sebagai dialog desktop atau bottom sheet mobile.
+
+Bell player tidak menjadi link langsung. Bell membuka popover maksimal lima tindakan terbaru, sementara badge tetap menghitung semua negotiation yang menunggu. Payload dideduplikasi per negotiation, diurutkan berdasarkan aktivitas terbaru, memakai alias anonim, dan tidak memiliki read/unread state.
+
+Builder create/edit listing memakai komposer dua sisi seperti simulator: `Kamu Berikan` berhadapan dengan `Kamu Cari`, dan item/quantity dapat ditambah atau dihapus dinamis. Picker Berikan dibentuk hanya dari inventory entry aktif milik player; picker Cari memakai katalog aktif. Payload HTTP tetap memakai `offered[*][inventoryEntryId]`, `wanted[*][catalogItemId]`, dan quantity sehingga perubahan visual tidak mengubah kontrak listing. Quantity offered dibatasi oleh inventory aktif.
+
 Point value mempertahankan presisi sumber sampai dua angka desimal; nilai seperti `7.5` tidak boleh dibulatkan saat staging, snapshot, listing, atau perhitungan W/F/L.
 
 ## Batas privasi
@@ -89,8 +101,11 @@ Setelah final deal berhasil, kedua pihak boleh melihat USN dan IGN satu sama lai
 - Setiap counteroffer menutup proposal aktif sebelumnya sebagai `superseded` dan membuat versi baru.
 - Accept terhadap versi basi harus ditolak.
 - Recommendation hanya memakai inventory aktif milik viewer dan value snapshot listing. UI menampilkan total, delta, offer range, snapshot, item tanpa value, serta perspektif viewer.
+- Kandidat recommendation memakai resolver thumbnail katalog yang sama dengan surface lain. Setiap kartu dapat diedit dari inventory aktif viewer: maksimal delapan jenis item, quantity dibatasi stok entry, dan preview W/F/L dihitung ulang memakai value snapshot listing serta threshold aktif. Pengiriman proposal hanya dilakukan dari modal ringkasan; server memvalidasi inventory dan menghitung ulang komposisi sebelum membuat negotiation. Membuka recommendation untuk listing sendiri diarahkan ke `Penawaran Saya`, bukan menghasilkan error 422.
 - Route detail negotiation hanya tersedia bagi initiator atau owner. Discovery dan recommendation tidak mengirim email, USN, atau IGN pihak lawan.
 - Counteroffer mengganti sisi milik actor dan membawa sisi lawan dari proposal aktif. Versi lama menjadi `superseded` dan tetap tersedia sebagai history.
+- Composer counteroffer hanya mengizinkan actor mengubah sisi miliknya dari inventory aktif; sisi lawan dibawa dari proposal aktif di bawah lock. Client mengirim `proposalId` aktif dan server menolak counter dari versi basi.
+- Proposal version memiliki `intent = offer | request_more_items`. Intent `request_more_items` hanya valid ketika kalkulasi server dari perspektif pengirim menghasilkan `Lose`, tidak dapat di-accept, dan dapat dibalas dengan counteroffer normal atau ditolak.
 - Perubahan inventory yang dipakai proposal atau perubahan/cancel listing mengubah negotiation dan proposal aktif menjadi `invalidated`.
 - Proposal aktif kedaluwarsa setelah 24 jam dan negotiation setelah 7 hari. Scheduler `trade:expire-phase-three` berjalan setiap menit.
 - Participant dapat mengirim report reason-code terstruktur dari negotiation. Operator/admin mempunyai queue trust operations untuk review report dan suspend/lift akun; suspension menolak mutation trade baru tetapi tidak memblokir report atau logout.

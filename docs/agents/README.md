@@ -3,8 +3,8 @@
 | Item | Keterangan |
 |---|---|
 | Dokumen | Manifest dokumentasi agen |
-| Versi | v1.3 |
-| Tanggal | 26 Oktober 2026 |
+| Versi | v1.6 |
+| Tanggal | 27 Oktober 2026 |
 | Pemilik | Product dan Engineering |
 | Status | Berlaku |
 
@@ -27,7 +27,7 @@ Direktori ini adalah sumber konteks bersama bagi manusia dan coding agent. Setia
 | [`prd/README.md`](prd/README.md) | PRD | Product | Mendefinisikan masalah, batas, kebutuhan bernomor, aturan kritis, fase, dan ukuran keberhasilan produk. |
 | [`knowledge.md`](knowledge.md) | Glosarium & katalog | Product | Menyatukan istilah trade FISCH, formula value, privasi, kategori, dan state agar implementasi tidak menafsirkan ulang domain. |
 | [`development-phases.md`](development-phases.md) | Roadmap & audit gap | Product + Engineering | Memetakan requirement ke fase capability, gerbang keluar, bukti implementasi, gap, blocker, dan urutan backlog. |
-| [`counteroffer-ux-plan.md`](counteroffer-ux-plan.md) | Rencana implementasi | Product + Engineering | Menyimpan rancangan counteroffer dan permintaan non-binding agar lawan menambah item sebelum coding dilanjutkan. |
+| [`counteroffer-ux-plan.md`](counteroffer-ux-plan.md) | Rencana implementasi | Product + Engineering | Mencatat rancangan yang telah diterapkan untuk composer counteroffer dan permintaan non-binding agar lawan menambah item. |
 | [`memory.md`](memory.md) | Memory kerja | Engineering | Menyimpan keadaan terverifikasi, keputusan aktif, progres, dan next step lintas sesi. |
 | [`adr/README.md`](adr/README.md) | Indeks ADR | Engineering | Menyatakan status dan urutan seluruh keputusan arsitektur. |
 | [`adr/ADR-001-application-architecture.md`](adr/ADR-001-application-architecture.md) | ADR | Engineering | Menetapkan Laravel + Inertia React sebagai bentuk aplikasi dan repository. |

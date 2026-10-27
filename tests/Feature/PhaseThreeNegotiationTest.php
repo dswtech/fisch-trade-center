@@ -34,10 +34,21 @@ final class PhaseThreeNegotiationTest extends TestCase
                 ->where('section', 'recommendations')
                 ->where('listing.alias', 'Anonymous trader')
                 ->has('recommendations')
+                ->has('recommendationInventory')
+                ->where('recommendationInventory.0.inventoryEntryId', $fixture['initiatorEntry']->public_id)
+                ->where('recommendationInventory.0.available', $fixture['initiatorEntry']->quantity)
+                ->where('fairThresholdPercent', 10)
+                ->where('listing.offeredItems.0.thumbnailUrl', fn (string $url): bool => str_contains($url, '/images/categories/'))
+                ->where('listing.offeredItems.0.quantity', 1)
                 ->where('recommendations.0.items.0.inventoryEntryId', $fixture['initiatorEntry']->public_id)
+                ->where('recommendations.0.items.0.thumbnailUrl', fn (string $url): bool => str_contains($url, '/images/categories/'))
                 ->where('recommendations.0.perspective', 'viewer')
                 ->missing('listing.email')
                 ->missing('listing.usn'));
+
+        $this->actingAs($fixture['owner'])->get('/recommendations/'.$fixture['listing']->public_id)
+            ->assertRedirect(route('listings.manage'))
+            ->assertSessionHas('error');
 
         $response = $this->actingAs($fixture['initiator'])->post('/negotiations', [
             'listingId' => $fixture['listing']->public_id,
@@ -60,6 +71,7 @@ final class PhaseThreeNegotiationTest extends TestCase
         $firstProposal = DB::table('proposal_versions')->where('negotiation_id', $negotiation->id)->where('version', 1)->first();
 
         $this->actingAs($fixture['owner'])->post('/negotiations/'.$negotiation->public_id.'/counter', [
+            'proposalId' => $firstProposal->public_id,
             'items' => [['inventoryEntryId' => $fixture['ownerEntry']->public_id, 'quantity' => 1]],
         ])->assertRedirect();
 
@@ -78,6 +90,72 @@ final class PhaseThreeNegotiationTest extends TestCase
         self::assertDatabaseHas('proposal_versions', ['id' => $secondProposal->id, 'status' => 'accepted']);
         self::assertDatabaseHas('audit_events', ['actor_id' => $fixture['owner']->id, 'event_type' => 'negotiation.countered', 'subject_public_id' => $negotiation->public_id]);
         self::assertSame(2, DB::table('audit_events')->where('event_type', 'proposal.accepted')->where('subject_public_id', $negotiation->public_id)->count());
+    }
+
+    public function test_lose_draft_can_request_more_items_but_non_binding_request_cannot_be_accepted(): void
+    {
+        $fixture = $this->fixture();
+
+        $this->actingAs($fixture['initiator'])->post('/negotiations', [
+            'listingId' => $fixture['listing']->public_id,
+            'intent' => 'request_more_items',
+            'items' => [['inventoryEntryId' => $fixture['initiatorEntry']->public_id, 'quantity' => 2]],
+        ])->assertRedirect();
+
+        $negotiation = Negotiation::query()->sole();
+        $request = DB::table('proposal_versions')->where('negotiation_id', $negotiation->id)->sole();
+        self::assertSame('request_more_items', $request->intent);
+        self::assertDatabaseHas('audit_events', ['event_type' => 'proposal.adjustment_requested', 'subject_public_id' => $negotiation->public_id]);
+
+        $this->actingAs($fixture['owner'])->post('/negotiations/'.$negotiation->public_id.'/accept', ['proposalId' => $request->public_id])->assertConflict();
+        self::assertDatabaseCount('proposal_acceptances', 0);
+
+        $this->actingAs($fixture['owner'])->get('/negotiations/'.$negotiation->public_id)
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('tradeActions.pendingCount', 1)
+                ->where('negotiation.activeProposal.intent', 'request_more_items')
+                ->where('negotiation.activeProposal.proposerIsViewer', false)
+                ->where('negotiation.activeProposal.canAccept', false)
+                ->where('negotiation.activeProposal.items.0.thumbnailUrl', fn (string $url): bool => str_contains($url, '/images/categories/'))
+                ->where('entries.0.available', 2)
+                ->where('entries.0.unitValue', 100)
+                ->where('fairThresholdPercent', 10));
+        $this->actingAs($fixture['initiator'])->get('/negotiations/'.$negotiation->public_id)
+            ->assertInertia(fn (Assert $page) => $page->where('tradeActions.pendingCount', 0));
+
+        $this->actingAs($fixture['owner'])->post('/negotiations/'.$negotiation->public_id.'/counter', [
+            'proposalId' => $request->public_id,
+            'intent' => 'offer',
+            'items' => [['inventoryEntryId' => $fixture['ownerEntry']->public_id, 'quantity' => 2]],
+        ])->assertRedirect();
+
+        $response = DB::table('proposal_versions')->where('negotiation_id', $negotiation->id)->where('version', 2)->sole();
+        self::assertSame('offer', $response->intent);
+    }
+
+    public function test_request_more_items_requires_lose_and_stale_counter_does_not_create_a_version(): void
+    {
+        $fixture = $this->fixture();
+        $this->actingAs($fixture['initiator'])->post('/negotiations', [
+            'listingId' => $fixture['listing']->public_id,
+            'intent' => 'request_more_items',
+            'items' => [['inventoryEntryId' => $fixture['initiatorEntry']->public_id, 'quantity' => 1]],
+        ])->assertUnprocessable();
+        self::assertDatabaseCount('negotiations', 0);
+
+        $negotiation = $this->start($fixture);
+        $first = DB::table('proposal_versions')->where('negotiation_id', $negotiation->id)->sole();
+        $this->actingAs($fixture['owner'])->post('/negotiations/'.$negotiation->public_id.'/counter', [
+            'proposalId' => $first->public_id,
+            'items' => [['inventoryEntryId' => $fixture['ownerEntry']->public_id, 'quantity' => 1]],
+        ])->assertRedirect();
+        $this->actingAs($fixture['initiator'])->post('/negotiations/'.$negotiation->public_id.'/counter', [
+            'proposalId' => $first->public_id,
+            'items' => [['inventoryEntryId' => $fixture['initiatorEntry']->public_id, 'quantity' => 1]],
+        ])->assertConflict();
+
+        self::assertSame(2, DB::table('proposal_versions')->where('negotiation_id', $negotiation->id)->count());
+        self::assertSame(2, $negotiation->fresh()->active_proposal_version);
     }
 
     public function test_participants_can_reject_or_cancel_with_structured_reasons(): void

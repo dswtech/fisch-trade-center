@@ -30,6 +30,11 @@ Produk bukan sekadar papan listing: setiap hasil penilaian dan listing yang bern
 
 - Player mendaftar dengan email/password, memverifikasi email, mengisi USN/IGN manual yang tetap berstatus `unverified`, lalu mengelola inventory.
 - Player membuat listing dari inventory, mencari listing pemain lain, dan membandingkan dua sisi trade lewat simulator W/F/L.
+- Discovery diawali ringkasan pencarian trade `Kamu Berikan → W/F/L → Kamu Terima` yang mengarah ke simulator, lalu dilanjutkan feed dua kolom pada desktop: penawaran anonim di kiri serta snapshot, insight item paling dicari/ditawarkan, dan rekomendasi inventory personal di kanan. Pada UI pemain, listing milik sendiri disebut `Penawaran Saya`.
+- Pada halaman recommendation, setiap kandidat dapat disesuaikan dari inventory aktif: tambah/hapus item, ubah quantity, lalu tinjau modal ringkasan W/F/L sebelum proposal dikirim dan divalidasi ulang server.
+- Di ruang negotiation, counteroffer memakai composer yang sama: player hanya mengubah item miliknya, sementara sisi lawan tetap read-only. Draft `LOSE` dapat dikirim sebagai permintaan non-binding agar lawan menambah item; permintaan tersebut tidak dapat diterima sebagai deal.
+- Guest dan player menelusuri katalog publik melalui pencarian canonical name/alias/kategori, filter kategori, empat pilihan sort, pagination 40 item, dan halaman detail stable `public_id`.
+- Header menampilkan form Login kontekstual untuk guest tanpa memindahkan halaman saat form dibuka. Login sukses kembali ke URL lokal asal. Player mendapat menu akun Profil/Logout serta bell dengan badge jumlah penuh dan popover maksimal lima tindakan trade terbaru; fitur ini tidak membuat inbox atau status read/unread.
 - Administrator mengunggah CSV katalog/value ke staging, meninjau preview dan warning, lalu memublikasikan snapshot valid secara manual.
 - Administrator mengelola master Rod non-tradable, relasi Rod Skin, thumbnail item, Fair threshold, dan status katalog.
 - Bahasa UI pertama dipilih dari locale browser (`id` untuk Indonesia, selain itu `en`), dapat diganti, dan dipersist.
@@ -56,12 +61,14 @@ Produk bukan sekadar papan listing: setiap hasil penilaian dan listing yang bern
 - Kategori awal adalah `rod_skin`, `boat`, `relic_set`, dan `other`; model kategori tidak boleh menjadi enum tertutup.
 - Rod adalah metadata non-tradable. Rod Skin tanpa relasi menampilkan `Undefined Rod`.
 - Thumbnail menerima JPG/PNG/WebP maksimal 2 MB. Item tanpa thumbnail memakai fallback kategori.
+- Kartu katalog memprioritaskan gambar, canonical item name, point value, dan offer range. Detail item juga menampilkan metadata Rod dan versi snapshot aktif.
 - Tidak ada migration, seed, scheduler, queue worker, atau import yang dijalankan terhadap database persisten oleh agent tanpa perintah eksplisit.
 
 ## Brand Commitments
 
 - Nama produk: Fisch Trade Center.
 - Struktur UX mengambil referensi dari kepadatan, app shell, dan hierarchy Metronic Tailwind Demo 1 tanpa menyalin source, aset, logo, atau composition secara literal.
+- Hierarchy katalog mengambil referensi dari pola Fisch Value List di Game.Guide—gambar dominan, nama, value, search/filter/sort, dan pagination—tanpa menyalin data, source, atau aset pihak ketiga.
 - Palet berangkat dari midnight navy, indigo, violet, putih dingin, dan aksen kuning terbatas pada lampiran pengguna.
 - Identitas harus original dan dekat dengan atmosfer dunia memancing—laut dalam, bioluminesensi, perlengkapan, rarity, dan exchange—tanpa meniru logo atau artwork Fisch, Roblox, maupun Metronic dan tanpa menyatakan afiliasi resmi.
 - UI bilingual Indonesia–English. Dokumentasi produk tetap Bahasa Indonesia; nama kode dan kontrak teknis tetap English.

@@ -25,6 +25,15 @@ final class ExampleTest extends TestCase
         $this->get('/')->assertOk()->assertDontSee('private@example.test')->assertDontSee('SecretIGN')->assertSee('/build/assets/app.js?v=', false);
     }
 
+    public function test_login_overlay_returns_to_a_safe_local_page_only(): void
+    {
+        User::create(['name' => 'Returning Player', 'email' => 'returning@example.test', 'password' => 'password123']);
+
+        $this->post('/login', ['email' => 'returning@example.test', 'password' => 'password123', 'return_to' => '/catalog?q=Abyssal'])->assertRedirect('/catalog?q=Abyssal');
+        $this->post('/logout');
+        $this->post('/login', ['email' => 'returning@example.test', 'password' => 'password123', 'return_to' => '//evil.example'])->assertRedirect('/');
+    }
+
     public function test_unverified_user_is_gated_from_private_phase_one_surfaces(): void
     {
         $user=User::create(['name'=>'Unverified','email'=>'u@example.test','password'=>'password123']);
@@ -134,7 +143,7 @@ final class ExampleTest extends TestCase
 
         $query=http_build_query(['offeredItem'=>$offered->public_id,'wantedItem'=>$wanted->public_id,'category'=>$categoryPublicId,'minValue'=>2400,'maxValue'=>2400,'freshness'=>'hour']);
         $response=$this->actingAs($viewer)->get('/search?'.$query);
-        $response->assertOk()->assertDontSee('private-owner@example.test')->assertDontSee('Private Owner')->assertDontSee('OwnerSecretUSN')->assertDontSee('OwnerSecretIGN')->assertInertia(fn(Assert $page)=>$page->component('discovery')->has('listings',1)->where('listings.0.offered','Abyssal Current')->where('listings.0.wanted','Tidebreaker')->where('listings.0.value',2400));
+        $response->assertOk()->assertDontSee('private-owner@example.test')->assertDontSee('Private Owner')->assertDontSee('OwnerSecretUSN')->assertDontSee('OwnerSecretIGN')->assertInertia(fn(Assert $page)=>$page->component('discovery-hub')->has('listings',1)->where('listings.0.offered','Abyssal Current')->where('listings.0.wanted','Tidebreaker')->where('listings.0.value',2400)->has('listings.0.offeredItems',1)->has('listings.0.wantedItems',1));
         $this->actingAs($viewer)->get('/search?'.http_build_query(['maxValue'=>2399]))->assertInertia(fn(Assert $page)=>$page->has('listings',0));
         $this->actingAs($owner)->get('/search?'.$query)->assertInertia(fn(Assert $page)=>$page->has('listings',0));
     }

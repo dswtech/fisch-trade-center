@@ -6,7 +6,7 @@ Jalankan dari root repository pada Windows:
 powershell -NoProfile -ExecutionPolicy Bypass -File tests/benchmark/run-postgres.ps1
 ```
 
-Harness membuat cluster PostgreSQL sementara di `tests/benchmark/.pgdata`, memakai port `55432`, menjalankan migration pada database `fisch_trade_benchmark`, menguji acceptance proposal dan final acceptance deal secara bersamaan melalui proses terpisah, memuat 100.000 listing synthetic dan 200.000 baris item terindeks, lalu menghentikan dan menghapus cluster beserta log-nya.
+Harness membuat cluster PostgreSQL sementara di `tests/benchmark/.pgdata`, memakai port `55432`, menjalankan migration pada database `fisch_trade_benchmark`, menguji acceptance proposal dan final acceptance deal secara bersamaan melalui proses terpisah, memuat 100.000 listing synthetic dan 200.000 baris item terindeks, mengukur matrix search serta insight pasar Discovery, lalu menghentikan dan menghapus cluster beserta log-nya.
 
 Penjagaan menolak database selain environment `benchmark` dengan nama tepat `fisch_trade_benchmark`. Tidak ada koneksi ke database development atau produksi.
 
@@ -39,3 +39,9 @@ Benchmark mengukur query lokal pada hardware pengembangan, bukan latency jaringa
 - Gerbang lulus hanya bila tepat dua acceptance, dua identity snapshot, dua reveal entitlement, dan satu audit `deal.revealed` tercatat.
 - Koneksi PostgreSQL dipaksa memakai timezone UTC agar `timestampTz` dan expiry PHP mempunyai instant yang sama.
 - Eksekusi terverifikasi: lulus. Deal berakhir `revealed`; benchmark search pada run yang sama mencatat p95 maksimum `428,61 ms`.
+
+## Discovery insight SRC-06 — 27 Oktober 2026
+
+- Matrix search dan insight pasar diuji pada cluster PostgreSQL disposable dengan 100.000 listing serta 200.000 item listing.
+- P95 matrix search maksimum `527,23 ms`; p95 agregasi insight pasar `420,95 ms`. Keduanya berada di bawah target p95 `1.000 ms`.
+- Insight menjalankan active listing count serta ranking offered/wanted current-version. Satu sampel maksimum `1.824,41 ms` tercatat, tetapi gerbang performa tetap memakai p95 agar konsisten dengan NFR produk.

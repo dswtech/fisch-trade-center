@@ -5,7 +5,7 @@
 | Dokumen | Rencana implementasi tertunda |
 | Tanggal | 27 Oktober 2026 |
 | Pemilik | Product dan Engineering |
-| Status | Disetujui, belum diimplementasikan |
+| Status | Diimplementasikan dan diverifikasi |
 
 ## Tujuan
 

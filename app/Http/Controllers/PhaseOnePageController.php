@@ -6,14 +6,63 @@ use App\Domain\Trade\WflCalculator;
 use App\Models\Listing;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Collection;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class PhaseOnePageController extends Controller
 {
-    public function catalog(): Response
+    public function catalog(Request $request): Response
     {
-        return Inertia::render('workspace', ['section' => 'catalog', 'items' => $this->catalogItems()]);
+        $data = $request->validate([
+            'q' => ['nullable', 'string', 'max:100'],
+            'category' => ['nullable', Rule::in(array_keys((array) config('catalog.categories')))],
+            'sort' => ['nullable', Rule::in(['value_desc', 'value_asc', 'name_asc', 'name_desc'])],
+            'page' => ['nullable', 'integer', 'min:1'],
+        ]);
+        $query = trim((string) ($data['q'] ?? ''));
+        $category = (string) ($data['category'] ?? '');
+        $sort = (string) ($data['sort'] ?? 'value_desc');
+        $page = (int) ($data['page'] ?? 1);
+        $perPage = 40;
+        $items = $this->catalogItems();
+
+        if ($query !== '') {
+            $needle = mb_strtolower($query);
+            $items = $items->filter(fn (array $item): bool => str_contains(mb_strtolower(implode(' ', [$item['name'], $item['category'], $item['categoryKey'], ...$item['aliases']])), $needle));
+        }
+        if ($category !== '') {
+            $items = $items->where('categoryKey', $category);
+        }
+        $items = $this->sortCatalog($items, $sort)->values();
+        $total = $items->count();
+        $lastPage = max(1, (int) ceil($total / $perPage));
+        $pageItems = $items->slice(($page - 1) * $perPage, $perPage)->values();
+
+        return Inertia::render('workspace', [
+            'section' => 'catalog',
+            'items' => $pageItems,
+            'catalogFilters' => ['q' => $query, 'category' => $category, 'sort' => $sort],
+            'pagination' => [
+                'currentPage' => $page, 'lastPage' => $lastPage, 'perPage' => $perPage, 'total' => $total,
+                'from' => $pageItems->isEmpty() ? null : (($page - 1) * $perPage) + 1,
+                'to' => $pageItems->isEmpty() ? null : (($page - 1) * $perPage) + $pageItems->count(),
+            ],
+        ]);
+    }
+
+    public function catalogShow(string $item): Response
+    {
+        $catalogItem = $this->catalogItems()->firstWhere('id', $item);
+        abort_unless($catalogItem, 404);
+        $snapshot = DB::table('value_snapshots')->whereNotNull('published_at')->orderByDesc('published_at')->orderByDesc('id')->first(['version', 'published_at']);
+
+        return Inertia::render('workspace', [
+            'section' => 'catalog-detail',
+            'item' => $catalogItem,
+            'snapshot' => $snapshot ? ['version' => $snapshot->version, 'publishedAt' => $snapshot->published_at] : null,
+        ]);
     }
 
     public function inventory(Request $request): Response
@@ -96,7 +145,7 @@ class PhaseOnePageController extends Controller
         return Inertia::render('workspace', ['section' => 'profile', 'profile' => DB::table('player_profiles')->where('user_id', $request->user()->id)->first(['usn', 'ign'])]);
     }
 
-    private function catalogItems()
+    private function catalogItems(): Collection
     {
         $snapshotId = DB::table('value_snapshots')->whereNotNull('published_at')->orderByDesc('published_at')->orderByDesc('id')->value('id');
 
@@ -105,13 +154,32 @@ class PhaseOnePageController extends Controller
             ->leftJoin('catalog_item_values', fn ($join) => $join->on('catalog_item_values.catalog_item_id', '=', 'catalog_items.id')->where('catalog_item_values.snapshot_id', $snapshotId ?? 0))
             ->where('catalog_items.is_active', true)->where('catalog_categories.is_active', true)
             ->whereIn('catalog_categories.key', array_keys((array) config('catalog.categories')))->orderBy('canonical_name')
-            ->get(['catalog_items.public_id as id', 'canonical_name as name', 'catalog_categories.name as category', 'catalog_categories.key as categoryKey', 'catalog_items.thumbnail_path as thumbnailPath', 'rods.name as rodName', 'catalog_item_values.unit_value as value', 'catalog_item_values.offer_range as offerRange'])
+            ->get(['catalog_items.public_id as id', 'canonical_name as name', 'catalog_items.aliases', 'catalog_categories.name as category', 'catalog_categories.key as categoryKey', 'catalog_items.thumbnail_path as thumbnailPath', 'rods.name as rodName', 'catalog_item_values.unit_value as value', 'catalog_item_values.offer_range as offerRange'])
             ->map(fn ($item): array => [
                 'id' => $item->id, 'name' => $item->name, 'category' => $item->category,
+                'aliases' => is_string($item->aliases) ? (json_decode($item->aliases, true) ?: []) : ($item->aliases ?? []),
+                'categoryKey' => $item->categoryKey,
                 'rodName' => $item->rodName ?? ($item->categoryKey === 'rod_skin' ? 'Undefined Rod' : null),
                 'thumbnailUrl' => CatalogItemImage::url($item->thumbnailPath, $item->categoryKey),
                 'value' => $item->value === null ? null : (float) $item->value, 'offerRange' => $item->offerRange,
             ]);
+    }
+
+    private function sortCatalog(Collection $items, string $sort): Collection
+    {
+        return $items->sort(function (array $left, array $right) use ($sort): int {
+            if (str_starts_with($sort, 'name_')) {
+                $comparison = strcasecmp($left['name'], $right['name']);
+                return $sort === 'name_desc' ? -$comparison : $comparison;
+            }
+            if ($left['value'] === null || $right['value'] === null) {
+                if ($left['value'] === $right['value']) return strcasecmp($left['name'], $right['name']);
+                return $left['value'] === null ? 1 : -1;
+            }
+            $comparison = $left['value'] <=> $right['value'];
+            if ($comparison === 0) return strcasecmp($left['name'], $right['name']);
+            return $sort === 'value_desc' ? -$comparison : $comparison;
+        });
     }
 
     private function inventoryEntries(Request $request)

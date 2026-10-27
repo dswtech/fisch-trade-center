@@ -1,7 +1,6 @@
 <?php
 
 use App\Http\Controllers\AuthController;
-use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\PreferenceController;
 use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\ListingController;
@@ -23,10 +22,11 @@ use App\Http\Controllers\DealController;
 use App\Http\Controllers\AdminTimeControlController;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/', DashboardController::class)->name('dashboard');
+Route::get('/', SearchController::class)->name('dashboard');
 Route::get('/ready', ReadinessController::class)->name('ready');
 Route::get('/catalog', [PhaseOnePageController::class, 'catalog'])->name('catalog');
-Route::get('/listings', DashboardController::class)->name('listings');
+Route::get('/catalog/{item}', [PhaseOnePageController::class, 'catalogShow'])->name('catalog.show');
+Route::get('/listings', SearchController::class)->name('listings');
 Route::get('/search', SearchController::class)->name('search');
 
 Route::middleware('guest')->group(function (): void {

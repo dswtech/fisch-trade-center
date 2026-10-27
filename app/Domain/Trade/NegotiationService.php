@@ -11,9 +11,11 @@ use Illuminate\Support\Str;
 
 final class NegotiationService
 {
-    public function start(User $actor, Listing $listing, array $initiatorItems): Negotiation
+    public function __construct(private readonly WflCalculator $calculator) {}
+
+    public function start(User $actor, Listing $listing, array $initiatorItems, string $intent = 'offer'): Negotiation
     {
-        return DB::transaction(function () use ($actor, $listing, $initiatorItems): Negotiation {
+        return DB::transaction(function () use ($actor, $listing, $initiatorItems, $intent): Negotiation {
             $listing = Listing::whereKey($listing->id)->lockForUpdate()->firstOrFail();
             abort_if($listing->user_id === $actor->id, 422, 'You cannot negotiate with your own listing.');
             abort_unless($listing->status === 'active' && (! $listing->expires_at || $listing->expires_at->isFuture()), 409, 'Listing is no longer active.');
@@ -31,23 +33,38 @@ final class NegotiationService
                 'initiator_alias' => $this->alias(), 'owner_alias' => $this->alias(), 'last_activity_at' => now(),
                 'expires_at' => now()->addDays((int) config('phase_two.negotiation_expiry_days', 7)),
             ]);
-            $this->createProposal($negotiation, $actor->id, 1, $initiatorItems, $ownerItems);
+            $this->createProposal($negotiation, $actor->id, 1, $initiatorItems, $ownerItems, $intent);
             $this->audit($actor->id, 'negotiation.started', $negotiation->public_id, ['proposal_version' => 1]);
+            if ($intent === 'request_more_items') {
+                $this->audit($actor->id, 'proposal.adjustment_requested', $negotiation->public_id, ['proposal_version' => 1, 'request_code' => 'add_items']);
+            }
             return $negotiation->fresh();
         });
     }
 
-    public function counter(User $actor, Negotiation $negotiation, array $initiatorItems, array $ownerItems): ProposalVersion
+    public function counter(User $actor, Negotiation $negotiation, string $expectedProposalId, array $actorItems, string $intent = 'offer'): ProposalVersion
     {
-        return DB::transaction(function () use ($actor, $negotiation, $initiatorItems, $ownerItems): ProposalVersion {
+        return DB::transaction(function () use ($actor, $negotiation, $expectedProposalId, $actorItems, $intent): ProposalVersion {
             $negotiation = Negotiation::whereKey($negotiation->id)->lockForUpdate()->firstOrFail();
             $this->guardAction($actor, $negotiation);
             abort_unless(in_array($negotiation->status, ['proposed', 'countered'], true), 409, 'Negotiation does not accept counteroffers.');
+            $active = ProposalVersion::where('negotiation_id', $negotiation->id)
+                ->where('version', $negotiation->active_proposal_version)->lockForUpdate()->firstOrFail();
+            abort_unless(hash_equals($active->public_id, $expectedProposalId), 409, 'Proposal version is stale.');
+            abort_unless($active->status === 'active' && $active->expires_at->isFuture(), 409, 'Proposal is not active.');
+            $current = DB::table('proposal_items')->join('inventory_entries', 'inventory_entries.id', '=', 'proposal_items.inventory_entry_id')
+                ->where('proposal_version_id', $active->id)->get(['proposal_items.side', 'inventory_entries.public_id as inventoryEntryId', 'proposal_items.quantity'])
+                ->groupBy('side')->map(fn ($items): array => $items->map(fn ($item): array => ['inventoryEntryId' => $item->inventoryEntryId, 'quantity' => $item->quantity])->all());
+            $initiatorItems = $actor->id === $negotiation->initiator_id ? $actorItems : $current->get('initiator', []);
+            $ownerItems = $actor->id === $negotiation->owner_id ? $actorItems : $current->get('owner', []);
             ProposalVersion::where('negotiation_id', $negotiation->id)->where('status', 'active')->update(['status' => 'superseded']);
             $next = ((int) $negotiation->active_proposal_version) + 1;
-            $proposal = $this->createProposal($negotiation, $actor->id, $next, $initiatorItems, $ownerItems);
+            $proposal = $this->createProposal($negotiation, $actor->id, $next, $initiatorItems, $ownerItems, $intent);
             $negotiation->update(['status' => 'countered', 'active_proposal_version' => $next, 'last_activity_at' => now(), 'expires_at' => now()->addDays((int) config('phase_two.negotiation_expiry_days', 7))]);
             $this->audit($actor->id, 'negotiation.countered', $negotiation->public_id, ['proposal_version' => $next]);
+            if ($intent === 'request_more_items') {
+                $this->audit($actor->id, 'proposal.adjustment_requested', $negotiation->public_id, ['proposal_version' => $next, 'request_code' => 'add_items']);
+            }
             return $proposal;
         });
     }
@@ -60,6 +77,7 @@ final class NegotiationService
             abort_unless((int) $negotiation->active_proposal_version === $proposalVersion, 409, 'Proposal version is stale.');
             $proposal = ProposalVersion::where('negotiation_id', $negotiation->id)->where('version', $proposalVersion)->lockForUpdate()->firstOrFail();
             abort_unless($proposal->status === 'active' && $proposal->expires_at->isFuture(), 409, 'Proposal is not active.');
+            abort_unless($proposal->intent === 'offer', 409, 'Adjustment requests cannot be accepted. Send a counteroffer or reject the request.');
             $this->validateProposalInventory($proposal);
             $inserted = DB::table('proposal_acceptances')->insertOrIgnore(['proposal_version_id' => $proposal->id, 'user_id' => $actor->id, 'accepted_at' => now()]);
             if (DB::table('proposal_acceptances')->where('proposal_version_id', $proposal->id)->count() === 2) {
@@ -92,13 +110,27 @@ final class NegotiationService
         abort_if($invalid, 409, 'Proposal inventory is no longer available.');
     }
 
-    private function createProposal(Negotiation $negotiation, int $proposerId, int $version, array $initiatorItems, array $ownerItems): ProposalVersion
+    private function createProposal(Negotiation $negotiation, int $proposerId, int $version, array $initiatorItems, array $ownerItems, string $intent): ProposalVersion
     {
+        abort_unless(in_array($intent, ['offer', 'request_more_items'], true), 422, 'Proposal intent is invalid.');
         $initiator = $this->validatedItems($negotiation->initiator_id, $initiatorItems, 'initiator', $negotiation->value_snapshot_id);
         $owner = $this->validatedItems($negotiation->owner_id, $ownerItems, 'owner', $negotiation->value_snapshot_id);
+        $initiatorValue = $this->total($initiator);
+        $ownerValue = $this->total($owner);
+        if ($intent === 'request_more_items') {
+            $actorGives = $proposerId === $negotiation->initiator_id ? $initiator : $owner;
+            $actorReceives = $proposerId === $negotiation->initiator_id ? $owner : $initiator;
+            $result = $this->calculator->calculate(
+                $this->calculatorItems($actorGives),
+                $this->calculatorItems($actorReceives),
+                $this->threshold(),
+                (string) (DB::table('value_snapshots')->where('id', $negotiation->value_snapshot_id)->value('version') ?? ''),
+            );
+            abort_unless($result->status === WflStatus::Lose, 422, 'More items can only be requested when the proposal is Lose.');
+        }
         $proposal = ProposalVersion::create([
             'negotiation_id' => $negotiation->id, 'proposer_id' => $proposerId, 'value_snapshot_id' => $negotiation->value_snapshot_id,
-            'version' => $version, 'status' => 'active', 'initiator_value' => $this->total($initiator), 'owner_value' => $this->total($owner),
+            'version' => $version, 'status' => 'active', 'intent' => $intent, 'initiator_value' => $initiatorValue, 'owner_value' => $ownerValue,
             'expires_at' => now()->addHours((int) config('phase_two.proposal_expiry_hours', 24)),
         ]);
         $proposal->items()->createMany([...$initiator, ...$owner]);
@@ -125,6 +157,22 @@ final class NegotiationService
     private function total(array $items): ?float
     {
         return collect($items)->contains(fn (array $item): bool => $item['unit_value'] === null) ? null : (float) collect($items)->sum(fn (array $item): float => (float) $item['unit_value'] * $item['quantity']);
+    }
+
+    private function calculatorItems(array $items): array
+    {
+        return collect($items)->map(fn (array $item): array => [
+            'id' => (string) $item['inventory_entry_id'],
+            'quantity' => $item['quantity'],
+            'unit_value' => $item['unit_value'],
+        ])->all();
+    }
+
+    private function threshold(): float
+    {
+        $stored = DB::table('system_settings')->where('key', 'fair_threshold_percent')->value('value');
+
+        return $stored === null ? 10.0 : (float) (json_decode((string) $stored, true) ?? 10);
     }
 
     private function finish(User $actor, Negotiation $negotiation, string $status, string $reasonCode): void
